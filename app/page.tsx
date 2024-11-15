@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
+import './ui/globals.css'
 
 export const metadata: Metadata = {
   title: 'Kawa_Web',
@@ -13,7 +14,8 @@ export default function Home() {
         <div>
           <h1><strong>AboutMe</strong></h1>
         </div>
-          <div>
+
+          <div className="flex flex-row">
             <Image 
               src="/snsProfile.png"
               alt="Kawa_Cat. This icon is used by Kawa_ on SNS."
@@ -26,10 +28,10 @@ export default function Home() {
                 height: 'auto',
               }}
             />
-          <div>
-            <h3>Kawa_</h3>
-            <p>AtCoder 茶 /「努力はしないと始まらない」</p>
-          </div>
+            <div>
+              <h2>Kawa_</h2>
+              <p>AtCoder 茶 /「努力はしないと始まらない」</p>
+            </div>
         </div>
         <a href='https://x.com/kawa0x5f'>Twitter</a><br/>
         <a href='https://atcoder.jp/user/Kawa_'>AtCoder</a><br/>
