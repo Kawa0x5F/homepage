@@ -13,19 +13,23 @@ export default function Home() {
         <div>
           <h1><strong>AboutMe</strong></h1>
         </div>
-        <div>
-          <Image 
-            src="/snsProfile.png"
-            alt="Kawa_Cat. This icon is used by Kawa_ on SNS."
-            width={512}
-            height={512}
+          <div>
+            <Image 
+              src="/snsProfile.png"
+              alt="Kawa_Cat. This icon is used by Kawa_ on SNS."
+              width={512}
+              height={512}
 
-            sizes='100vw'
-            style={{
-              width: '15%',
-              height: 'auto',
-            }}
-          />
+              sizes='100vw'
+              style={{
+                width: '15%',
+                height: 'auto',
+              }}
+            />
+          <div>
+            <h3>Kawa_</h3>
+            <p>AtCoder 茶 /「努力はしないと始まらない」</p>
+          </div>
         </div>
         <a href='https://x.com/kawa0x5f'>Twitter</a><br/>
         <a href='https://atcoder.jp/user/Kawa_'>AtCoder</a><br/>
