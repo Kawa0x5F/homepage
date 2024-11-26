@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <main>
-      <div> 
-        <div>
-          <h1><strong>AboutMe</strong></h1>
+      <div className='mx-80'>
+        <div className='rounded-lg bg-orange-50'>
+          <h1 className='ml-4'><strong>About me</strong></h1>
         </div>
 
           <div className="flex flex-row">
@@ -24,13 +24,14 @@ export default function Home() {
 
               sizes='100vw'
               style={{
-                width: '15%',
+                width: '30%',
                 height: 'auto',
               }}
             />
             <div>
               <h2>Kawa_</h2>
-              <p>AtCoder 茶 /「努力はしないと始まらない」</p>
+              <p>AtCoder 茶</p>
+              <p>「努力はしないと始まらない」</p>
             </div>
         </div>
         <a href='https://x.com/kawa0x5f'>Twitter</a><br/>
