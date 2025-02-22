@@ -12,16 +12,19 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <main className="relative w-full h-screen flex flex-col items-center justify-center">
-      <div>
-        <Link href="/about">ABOUT</Link>
-      </div>
-      <div>
-        <Link href="/blog">BLOG</Link>
-      </div>
-      <div>
-        <Link href="/product">PRODUCT</Link>
+      <div className="flex gap-x-6">
+        <Link href="/about" className="px-6 py-3 bg-white shadow-lg rounded-lg hover:shadow-xl transition-all">
+          ABOUT
+        </Link>
+        <Link href="/blog" className="px-6 py-3 bg-white shadow-lg rounded-lg hover:shadow-xl transition-all">
+          BLOG
+        </Link>
+        <Link href="/product" className="px-6 py-3 bg-white shadow-lg rounded-lg hover:shadow-xl transition-all">
+          PRODUCT
+        </Link>
       </div>
       <BackgroundText />
     </main>
   );
 }
+
