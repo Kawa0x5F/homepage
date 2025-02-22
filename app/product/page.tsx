@@ -3,11 +3,11 @@ import Link from 'next/link'
 import './../ui/globals.css'
 
 export const metadata: Metadata = {
-  title: 'Kawa_Web - Blog',
-  description: 'Kawa_のブログページ（開発中）',
+  title: 'Kawa_Web - Product',
+  description: 'Kawa_の作品ページ（開発中）',
 };
 
-export default function Blog() {
+export default function Product() {
   return (
     <main className="flex flex-col items-center justify-center h-screen text-center px-4">
       <h2 className="text-2xl font-semibold">このページは現在開発中です。</h2>

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: 'Kawa_のホームページです.',
 }
 
-export default function Home() {
+export default function About() {
   return (
     <main>
       <div className='mx-80'>
