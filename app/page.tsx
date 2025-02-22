@@ -18,6 +18,9 @@ export default function Home() {
       <div>
         <Link href="/blog">BLOG</Link>
       </div>
+      <div>
+        <Link href="/product">PRODUCT</Link>
+      </div>
       <BackgroundText />
     </main>
   );
