@@ -31,6 +31,7 @@ export default function About() {
           <a href="https://x.com/kawa0x5f" className="text-blue-500 hover:underline block">Twitter</a>
           <a href="https://atcoder.jp/user/Kawa_" className="text-blue-500 hover:underline block">AtCoder</a>
           <a href="https://github.com/Kawa0x5F" className="text-blue-500 hover:underline block">GitHub</a>
+          <a href="https://www.facebook.com/share/1526jPNvPN/" className="text-blue-500 hover:underline block">FaceBook</a>
         </div>
       </div>
       <Link 
