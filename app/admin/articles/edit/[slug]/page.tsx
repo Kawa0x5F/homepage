@@ -7,22 +7,23 @@ import './../../../../ui/globals.css';
 type Article = {
   id: number;
   title: string;
+  slug: string;
   content: string;
 };
 
 const EditArticlePage = () => {
   const router = useRouter();
-  const { id } = useParams();
+  const { slug } = useParams(); // `id` → `slug` に変更
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
     const fetchArticle = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/article/${id}`);
+        const res = await fetch(`http://localhost:8080/articles/${slug}`); // `id` → `slug`
         if (!res.ok) {
           throw new Error('記事の取得に失敗しました');
         }
@@ -36,14 +37,14 @@ const EditArticlePage = () => {
       }
     };
     fetchArticle();
-  }, [id]);
+  }, [slug]);
 
   const handleUpdate = async () => {
     if (!title || !content) return;
     setIsSubmitting(true);
     try {
-      await fetch(`http://localhost:8080/article/${id}`, {
-        method: 'POST',
+      await fetch(`http://localhost:8080/articles/${slug}`, { // `id` → `slug`
+        method: 'POST', // `PATCH` のほうが適切かも
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, content }),
       });
