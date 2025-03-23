@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
-import './../../../../ui/globals.css';
+import '@/app/ui/globals.css';
 
 type Article = {
   id: number;
@@ -13,7 +13,7 @@ type Article = {
 
 const EditArticlePage = () => {
   const router = useRouter();
-  const { slug } = useParams(); // `id` → `slug` に変更
+  const { slug } = useParams();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,7 +23,7 @@ const EditArticlePage = () => {
     if (!slug) return;
     const fetchArticle = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/articles/${slug}`); // `id` → `slug`
+        const res = await fetch(`http://localhost:8080/article/${slug}`);
         if (!res.ok) {
           throw new Error('記事の取得に失敗しました');
         }
@@ -43,8 +43,8 @@ const EditArticlePage = () => {
     if (!title || !content) return;
     setIsSubmitting(true);
     try {
-      await fetch(`http://localhost:8080/articles/${slug}`, { // `id` → `slug`
-        method: 'POST', // `PATCH` のほうが適切かも
+      await fetch(`http://localhost:8080/article/${slug}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, content }),
       });
@@ -64,16 +64,10 @@ const EditArticlePage = () => {
             キャンセル
           </button>
           <div className="flex space-x-6">
-            <span
-              className={`cursor-pointer text-sm font-medium ${isPreview ? 'text-gray-400' : 'text-gray-900 border-b-2 border-gray-900'} py-2`}
-              onClick={() => setIsPreview(false)}
-            >
+            <span className={`cursor-pointer text-sm font-medium ${isPreview ? 'text-gray-400' : 'text-gray-900 border-b-2 border-gray-900'} py-2`} onClick={() => setIsPreview(false)}>
               編集
             </span>
-            <span
-              className={`cursor-pointer text-sm font-medium ${isPreview ? 'text-gray-900 border-b-2 border-gray-900' : 'text-gray-400'} py-2`}
-              onClick={() => setIsPreview(true)}
-            >
+            <span className={`cursor-pointer text-sm font-medium ${isPreview ? 'text-gray-900 border-b-2 border-gray-900' : 'text-gray-400'} py-2`} onClick={() => setIsPreview(true)}>
               プレビュー
             </span>
           </div>
@@ -97,6 +91,7 @@ const EditArticlePage = () => {
           {isPreview ? (
             <div className="h-full">
               <h1 className="text-3xl font-bold mb-6 text-gray-900">{title || 'タイトルなし'}</h1>
+              <p className="text-gray-500">/{slug}</p>
               <div className="prose max-w-none">
                 {content ? (
                   <ReactMarkdown>{content}</ReactMarkdown>
@@ -114,6 +109,7 @@ const EditArticlePage = () => {
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full text-3xl font-bold mb-4 focus:outline-none border-0 text-gray-900 placeholder-gray-300"
               />
+              <p className="text-gray-500 text-sm">Slug: {slug}</p>
               <textarea
                 placeholder="本文をMarkdown形式で入力してください..."
                 value={content}
@@ -124,18 +120,6 @@ const EditArticlePage = () => {
           )}
         </div>
       </main>
-
-      {/* フッター */}
-      <footer className="w-full border-t border-gray-100 bg-white">
-        <div className="max-w-2xl mx-auto px-4 py-2 flex justify-between items-center">
-          <div className="text-xs text-gray-400">
-            {content && <span>{content.length} 文字</span>}
-          </div>
-          <div className="text-xs text-gray-400">
-            最終編集: {new Date().toLocaleDateString('ja-JP')}
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

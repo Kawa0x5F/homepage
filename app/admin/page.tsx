@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import './../ui/globals.css';
+import '@/app/ui/globals.css';
 
 const AdminPage = () => {
   const router = useRouter();
