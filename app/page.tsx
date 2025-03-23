@@ -19,9 +19,9 @@ export default function Home() {
   return (
     <main className="relative w-full h-screen flex flex-col items-center justify-center p-4 overflow-hidden">
       <Link 
-        href="/login" 
+        href="/admin" 
         className="absolute top-4 right-4 w-6 h-6 rounded-full opacity-10 hover:opacity-80 transition-opacity duration-300"
-        aria-label="隠しログインボタン"
+        aria-label="隠しボタン"
       >
         <div className="w-full h-full bg-gray-400 rounded-full"></div>
       </Link>
