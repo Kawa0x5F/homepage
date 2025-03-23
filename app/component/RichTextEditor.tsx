@@ -4,7 +4,7 @@ import { useEditor, EditorContent, Editor, Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { FC, useState, useEffect } from 'react';
+import { FC, useState, useEffect, useRef } from 'react';
 import { 
   Bold, 
   Italic, 
@@ -50,7 +50,9 @@ const ToolbarButton: FC<ToolbarButtonProps> = ({ action, isActive, children, tit
 
 const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [placeholderVisible, setPlaceholderVisible] = useState(!content);
+  const [isEmpty, setIsEmpty] = useState(!content);
+  const [isFocused, setIsFocused] = useState(false);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -68,7 +70,13 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) 
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       setContent(html);
-      setPlaceholderVisible(editor.isEmpty);
+      setIsEmpty(editor.isEmpty);
+    },
+    onFocus: () => {
+      setIsFocused(true);
+    },
+    onBlur: () => {
+      setIsFocused(false);
     },
   });
 
@@ -85,6 +93,14 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) 
     };
   }, [isFullscreen]);
 
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (editor && !isFocused) {
+      // コンテナがクリックされたが、エディタにフォーカスがない場合
+      // エディタにフォーカスを設定する
+      editor.commands.focus();
+    }
+  };
+
   if (!editor) return null;
 
   const toggleFullscreen = () => {
@@ -95,16 +111,48 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) 
   const customStyles = `
     .ProseMirror {
       outline: none;
+      min-height: 100%;
+      height: 100%;
     }
     
-    .ProseMirror p.is-editor-empty:first-child::before {
-      content: attr(data-placeholder);
-      float: left;
-      color: #adb5bd;
+    .editor-container {
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    
+    .editor-content {
+      min-height: 400px;
+      transition: all 0.2s ease;
+    }
+    
+    .editor-content::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       pointer-events: none;
-      height: 0;
+      z-index: -1;
+      transition: opacity 0.2s ease;
     }
     
+    .editor-content.empty:not(.focused)::before {
+      background: radial-gradient(circle at center, rgba(0,0,0,0.01) 0%, rgba(0,0,0,0) 70%);
+      opacity: 1;
+    }
+
+    .placeholder-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #9ca3af;
+      text-align: center;
+      pointer-events: none;
+      width: 80%;
+    }
+
     .ProseMirror ul {
       list-style-type: disc;
       padding-left: 1.5em;
@@ -325,41 +373,36 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) 
       </div>
 
       {/* エディタ本体 */}
-      <div className="relative">
+      <div 
+        ref={editorContainerRef}
+        onClick={handleContainerClick}
+        className={`
+          editor-container relative
+          transition-all duration-200
+          hover:bg-gray-50/20
+        `}
+      >
+
+      {isEmpty && !isFocused && (
+        <div className="placeholder-message">
+          <p className="text-lg font-medium">記事を書いてみましょう</p>
+          <p className="text-sm mt-2">クリックして入力を開始してください</p>
+        </div>
+      )}
+        
         <EditorContent 
           editor={editor} 
           className={`
-            prose max-w-none focus:outline-none transition-all
-            ${isFullscreen ? 'p-12 min-h-screen mx-auto max-w-4xl' : 'p-8 min-h-[400px]'}
+            editor-content relative
+            prose max-w-none transition-all
+            ${isFullscreen ? 'p-12 mx-auto max-w-4xl min-h-screen' : 'p-8 min-h-[400px]'}
+            ${isEmpty ? 'empty' : ''}
+            ${isFocused ? 'focused' : ''}
           `}
         />
       </div>
     </div>
   );
-};
-// Tiptapエディタの設定を拡張して、プレースホルダーを含める
-interface CreateEditorProps {
-  content: string;
-  extensions: Extension[];
-  onUpdate: (props: { editor: Editor }) => void;
-}
-
-const createEditor = ({ content, extensions, onUpdate }: CreateEditorProps) => {
-  return useEditor({
-    extensions: [
-      ...extensions,
-      StarterKit.configure({
-        paragraph: {
-          HTMLAttributes: {
-            class: 'is-editor-empty',
-            'data-placeholder': 'ここに記事を書いてください...'
-          }
-        }
-      }),
-    ],
-    content,
-    onUpdate,
-  });
 };
 
 export default ModernRichTextEditor;
