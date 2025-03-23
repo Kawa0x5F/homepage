@@ -24,7 +24,8 @@
     "react": "^18",
     "react-cropper": "^2.3.3",
     "react-dom": "^18",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "tiptap-markdown": "^0.8.10"
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.5",

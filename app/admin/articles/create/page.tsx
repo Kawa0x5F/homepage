@@ -31,14 +31,15 @@ const CreateArticlePage = () => {
   const [title, setTitle] = useState<string>('');
   const [slug, setSlug] = useState<string>('');
   const [content, setContent] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isSubmittingPublish, setIsSubmittingPublish] = useState<boolean>(false);
+  const [isSubmittingDraft, setIsSubmittingDraft] = useState<boolean>(false);
   const [featuredImage, setFeaturedImage] = useState<FeaturedImage | null>(null);
   const [croppingImage, setCroppingImage] = useState<boolean>(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const handleCreate = async (draft = false) => {
+  const handleCreate = async (publish = false) => {
     // 入力検証
     if (!title.trim()) {
       setErrorMessage('タイトルは必須です');
@@ -55,7 +56,13 @@ const CreateArticlePage = () => {
       return;
     }
     
-    setIsSubmitting(true);
+    // 公開と下書きの状態を個別に管理
+    if (publish) {
+      setIsSubmittingPublish(true);
+    } else {
+      setIsSubmittingDraft(true);
+    }
+    
     setErrorMessage(null);
     
     try {
@@ -69,7 +76,7 @@ const CreateArticlePage = () => {
           title, 
           slug, 
           content,
-          is_publish: draft,
+          is_publish: publish,
           image_path
         }),
       });
@@ -78,7 +85,8 @@ const CreateArticlePage = () => {
       if (!response.ok) {
         const errorData = await response.json() as ApiErrorResponse;
         setErrorMessage(errorData.message || errorData.error || 'エラーが発生しました');
-        setIsSubmitting(false);
+        setIsSubmittingPublish(false);
+        setIsSubmittingDraft(false);
         return;
       }
       
@@ -86,7 +94,8 @@ const CreateArticlePage = () => {
     } catch (error) {
       console.error('投稿エラー:', error);
       setErrorMessage('サーバーとの通信中にエラーが発生しました');
-      setIsSubmitting(false);
+      setIsSubmittingPublish(false);
+      setIsSubmittingDraft(false);
     }
   };
 
@@ -160,20 +169,20 @@ const CreateArticlePage = () => {
             <button 
               onClick={() => handleCreate(false)} 
               className="text-sm text-gray-600 flex items-center gap-1 px-3 py-1 rounded-full hover:bg-gray-100" 
-              disabled={isSubmitting}
+              disabled={isSubmittingDraft || isSubmittingPublish}
               type="button"
             >
               <Clock size={14} />
-              下書き保存
+              {isSubmittingDraft ? '保存中...' : '下書き保存'}
             </button>
             <button 
               onClick={() => handleCreate(true)} 
               className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-full text-sm font-medium" 
-              disabled={isSubmitting}
+              disabled={isSubmittingPublish || isSubmittingDraft}
               type="button"
             >
               <Save size={14} />
-              {isSubmitting ? '投稿中...' : '公開する'}
+              {isSubmittingPublish ? '公開中...' : '公開する'}
             </button>
           </div>
         </div>

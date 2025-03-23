@@ -8,7 +8,7 @@ type Article = {
   title: string;
   slug: string;
   content: string;
-  is_publish: string;
+  is_publish: boolean;
 };
 
 const AdminArticlePage = () => {
@@ -24,7 +24,7 @@ const AdminArticlePage = () => {
   const fetchArticles = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/articles');
+      const res = await fetch('http://localhost:8080/articles/all');
       const data = await res.json();
       if (Array.isArray(data)) {
         setArticles(data as Article[]);
@@ -57,14 +57,14 @@ const AdminArticlePage = () => {
   };
 
   // 公開状態を判定する関数
-  const getPublicStatusDisplay = (status: string) => {
-    if (status === '1' || status.toLowerCase() === 'true') {
+  const getPublicStatusDisplay = (status: boolean) => {
+    if (status) { // true の場合
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
           公開
         </span>
       );
-    } else {
+    } else { // false の場合
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
           非公開
@@ -72,6 +72,7 @@ const AdminArticlePage = () => {
       );
     }
   };
+
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">

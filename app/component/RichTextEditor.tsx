@@ -20,12 +20,16 @@ import {
   Undo,
   Redo,
   Maximize,
-  Minimize
+  Minimize,
+  FileDown
 } from 'lucide-react';
+import { Markdown } from 'tiptap-markdown';
 
 interface RichTextEditorProps {
-  content: string;
+  content?: string;
+  initialContent?: string;
   setContent: (content: string) => void;
+  isMarkdown?: boolean;
 }
 
 interface ToolbarButtonProps {
@@ -48,10 +52,19 @@ const ToolbarButton: FC<ToolbarButtonProps> = ({ action, isActive, children, tit
   </button>
 );
 
-const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) => {
+const ModernRichTextEditor: FC<RichTextEditorProps> = ({ 
+  content, 
+  initialContent = '', 
+  setContent, 
+  isMarkdown = true 
+}) => {
+  // コンテンツの追跡用の内部ステート
+  const [editorContent, setEditorContent] = useState(content || initialContent);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isEmpty, setIsEmpty] = useState(!content);
+  // Initialize isEmpty based on the initial content
+  const [isEmpty, setIsEmpty] = useState(!editorContent || editorContent === '<p></p>');
   const [isFocused, setIsFocused] = useState(false);
+  const [markdownContent, setMarkdownContent] = useState('');
   const editorContainerRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -65,11 +78,31 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) 
         inline: true,
         allowBase64: true,
       }),
+      Markdown.configure({
+        html: false,
+        tightLists: true,
+        bulletListMarker: '-',
+        linkify: true,
+      }),
     ],
-    content,
+    content: editorContent,
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
-      setContent(html);
+      // Convert to markdown if needed
+      if (isMarkdown) {
+        try {
+          const markdown = editor.storage.markdown.getMarkdown();
+          console.log("Generated Markdown:", markdown);
+          setMarkdownContent(markdown);
+          setContent(markdown);
+        } catch (err) {
+          console.error("Markdown conversion error:", err);
+          // エラー発生時はHTMLを使用
+          setContent(html);
+        }
+      } else {
+        setContent(html);
+      }
       setIsEmpty(editor.isEmpty);
     },
     onFocus: () => {
@@ -79,6 +112,30 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) 
       setIsFocused(false);
     },
   });
+
+  // contentまたはinitialContentが変更されたときにエディタを更新
+  useEffect(() => {
+    console.log('Content props changed:', { content, initialContent });
+    const newContent = content || initialContent;
+    setEditorContent(newContent);
+    
+    // Update isEmpty state based on the new content
+    setIsEmpty(!newContent || newContent === '<p></p>');
+    
+    if (editor && newContent) {
+      console.log('Updating editor content to:', newContent);
+      editor.commands.setContent(newContent);
+      // Also ensure isEmpty state is updated after editor content is set
+      setIsEmpty(editor.isEmpty);
+    }
+  }, [editor, content, initialContent]);
+
+  // Make sure isEmpty is properly updated after editor is initialized with content
+  useEffect(() => {
+    if (editor) {
+      setIsEmpty(editor.isEmpty);
+    }
+  }, [editor]);
 
   useEffect(() => {
     // フルスクリーンモードの設定
@@ -105,6 +162,22 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) 
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
+  };
+
+  const downloadMarkdown = () => {
+    if (!markdownContent && !editor) return;
+    
+    // Use editor's markdown if markdownContent is empty
+    const markdown = markdownContent || editor.storage.markdown.getMarkdown();
+    
+    // Create blob and download
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'document.md';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // エディタスタイルのカスタム定義
@@ -362,7 +435,16 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) 
           </ToolbarButton>
         </div>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center">
+          {isMarkdown && (
+            <ToolbarButton
+              action={downloadMarkdown}
+              title="Markdownをダウンロード"
+            >
+              <FileDown size={16} />
+            </ToolbarButton>
+          )}
+          
           <ToolbarButton
             action={toggleFullscreen}
             title={isFullscreen ? "フルスクリーン解除" : "フルスクリーン"}
@@ -383,6 +465,7 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({ content, setContent }) 
         `}
       >
 
+      {/* Only show placeholder if isEmpty is true AND not focused */}
       {isEmpty && !isFocused && (
         <div className="placeholder-message">
           <p className="text-lg font-medium">記事を書いてみましょう</p>
