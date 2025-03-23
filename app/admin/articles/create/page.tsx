@@ -50,9 +50,8 @@ const CreateArticlePage = () => {
       return;
     }
     
-    // 公開時のみスラグを必須とする
-    if (!draft && !slug.trim()) {
-      setErrorMessage('公開する場合はURLの設定が必須です');
+    if (!slug.trim()) {
+      setErrorMessage('URLの設定は必須です');
       return;
     }
     
@@ -61,7 +60,7 @@ const CreateArticlePage = () => {
     
     try {
       // アイキャッチ画像がある場合は先にアップロード処理を行う想定
-      const featuredImageUrl = featuredImage?.url || null;
+      const image_path = featuredImage?.url || null;
       
       const response = await fetch('http://localhost:8080/articles', {
         method: 'POST',
@@ -70,8 +69,8 @@ const CreateArticlePage = () => {
           title, 
           slug, 
           content,
-          status: draft ? 'draft' : 'published',
-          featuredImageUrl
+          is_publish: draft,
+          image_path
         }),
       });
       
@@ -159,7 +158,7 @@ const CreateArticlePage = () => {
               />
             </div>
             <button 
-              onClick={() => handleCreate(true)} 
+              onClick={() => handleCreate(false)} 
               className="text-sm text-gray-600 flex items-center gap-1 px-3 py-1 rounded-full hover:bg-gray-100" 
               disabled={isSubmitting}
               type="button"
@@ -168,7 +167,7 @@ const CreateArticlePage = () => {
               下書き保存
             </button>
             <button 
-              onClick={() => handleCreate(false)} 
+              onClick={() => handleCreate(true)} 
               className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-full text-sm font-medium" 
               disabled={isSubmitting}
               type="button"

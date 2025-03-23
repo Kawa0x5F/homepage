@@ -8,6 +8,7 @@ type Article = {
   title: string;
   slug: string;
   content: string;
+  is_publish: string;
 };
 
 const AdminArticlePage = () => {
@@ -55,6 +56,23 @@ const AdminArticlePage = () => {
     }
   };
 
+  // 公開状態を判定する関数
+  const getPublicStatusDisplay = (status: string) => {
+    if (status === '1' || status.toLowerCase() === 'true') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          公開
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          非公開
+        </span>
+      );
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
@@ -88,6 +106,7 @@ const AdminArticlePage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">タイトル</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">公開状態</th>
                     <th className="relative px-6 py-3"><span className="sr-only">編集</span></th>
                   </tr>
                 </thead>
@@ -97,6 +116,9 @@ const AdminArticlePage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{article.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{article.title}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{article.slug}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {getPublicStatusDisplay(article.is_publish)}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                         <button onClick={() => handleEditRedirect(article.slug)} className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-md">編集</button>
                         {deleteConfirmId === article.id ? (
