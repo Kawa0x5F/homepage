@@ -13,20 +13,20 @@ interface Article {
 }
 
 export default function ArticlePage() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
-    fetch(`http://localhost:8080/article/${id}`)
+    if (!slug) return;
+    fetch(`http://localhost:8080/article/${slug}`)
       .then((res) => res.json())
       .then((data: unknown) => {
         setArticle(data as Article);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [id]);
+  }, [slug]);
 
   if (loading) {
     return <p className="text-center mt-6">記事を読み込み中...</p>;

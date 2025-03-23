@@ -1,113 +1,249 @@
 'use client';
-import { useState } from 'react';
+
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import ReactMarkdown from 'react-markdown';
-import './../../../ui/globals.css';
+import { 
+  ArrowLeft, 
+  Clock, 
+  Save, 
+  Image as ImageIcon,
+  X,
+  AlertCircle
+} from 'lucide-react';
+import RichTextEditor from '@/app/component/RichTextEditor';
+import ImageCropper from '@/app/component/ImageCropper';
+
+// 型定義を追加
+interface FeaturedImage {
+  url: string;
+  file: File | null;
+}
+
+// APIのエラーレスポンス型を定義
+interface ApiErrorResponse {
+  message?: string;
+  error?: string;
+  [key: string]: unknown;
+}
 
 const CreateArticlePage = () => {
   const router = useRouter();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPreview, setIsPreview] = useState(false);
-
-  const handleCreate = async () => {
-    if (!title || !content) return;
+  const [title, setTitle] = useState<string>('');
+  const [slug, setSlug] = useState<string>('');
+  const [content, setContent] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [featuredImage, setFeaturedImage] = useState<FeaturedImage | null>(null);
+  const [croppingImage, setCroppingImage] = useState<boolean>(false);
+  const [imageToEdit, setImageToEdit] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleCreate = async (draft = false) => {
+    // 入力検証
+    if (!title.trim()) {
+      setErrorMessage('タイトルは必須です');
+      return;
+    }
+    
+    if (!content.trim()) {
+      setErrorMessage('本文は必須です');
+      return;
+    }
+    
+    // 公開時のみスラグを必須とする
+    if (!draft && !slug.trim()) {
+      setErrorMessage('公開する場合はURLの設定が必須です');
+      return;
+    }
+    
     setIsSubmitting(true);
+    setErrorMessage(null);
+    
     try {
-      await fetch('http://localhost:8080/articles', {
+      // アイキャッチ画像がある場合は先にアップロード処理を行う想定
+      const featuredImageUrl = featuredImage?.url || null;
+      
+      const response = await fetch('http://localhost:8080/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ 
+          title, 
+          slug, 
+          content,
+          status: draft ? 'draft' : 'published',
+          featuredImageUrl
+        }),
       });
+      
+      // APIからのエラーレスポンスを処理
+      if (!response.ok) {
+        const errorData = await response.json() as ApiErrorResponse;
+        setErrorMessage(errorData.message || errorData.error || 'エラーが発生しました');
+        setIsSubmitting(false);
+        return;
+      }
+      
       router.push('/admin/articles');
     } catch (error) {
       console.error('投稿エラー:', error);
+      setErrorMessage('サーバーとの通信中にエラーが発生しました');
       setIsSubmitting(false);
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setImageToEdit(reader.result);
+        setCroppingImage(true);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = (croppedImageUrl: string, croppedFile?: File) => {
+    setFeaturedImage({
+      url: croppedImageUrl,
+      file: croppedFile || null
+    });
+    setCroppingImage(false);
+  };
+
+  // エラーメッセージを閉じる
+  const dismissError = () => {
+    setErrorMessage(null);
+  };
+
   return (
-    <div className="flex flex-col items-center min-h-screen bg-white">
-      {/* ヘッダー */}
-      <header className="w-full border-b border-gray-100 bg-white">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex justify-between items-center">
-          <button onClick={() => router.push('/admin/articles')} className="text-gray-500 hover:text-gray-900 text-sm font-medium">
-            キャンセル
-          </button>
-          <div className="flex space-x-6">
-            <span
-              className={`cursor-pointer text-sm font-medium ${isPreview ? 'text-gray-400' : 'text-gray-900 border-b-2 border-gray-900'} py-2`}
-              onClick={() => setIsPreview(false)}
-            >
-              編集
-            </span>
-            <span
-              className={`cursor-pointer text-sm font-medium ${isPreview ? 'text-gray-900 border-b-2 border-gray-900' : 'text-gray-400'} py-2`}
-              onClick={() => setIsPreview(true)}
-            >
-              プレビュー
-            </span>
+    <div className="min-h-screen bg-white">
+      {/* エラーポップアップ */}
+      {errorMessage && (
+        <div className="fixed top-4 right-4 bg-red-50 border border-red-200 rounded-lg shadow-lg p-4 z-50 max-w-md flex items-start">
+          <AlertCircle className="text-red-500 mr-2 mt-0.5 shrink-0" size={18} />
+          <div className="flex-1">
+            <p className="text-red-700 text-sm">{errorMessage}</p>
           </div>
           <button
-            onClick={handleCreate}
-            disabled={isSubmitting || !title || !content}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              isSubmitting || !title || !content
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-green-500 text-white hover:bg-green-600'
-            }`}
+            className="text-gray-500 hover:text-gray-700 ml-2"
+            onClick={dismissError}
+            type="button"
           >
-            {isSubmitting ? '投稿中...' : '公開する'}
+            <X size={16} />
           </button>
+        </div>
+      )}
+
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <button 
+            onClick={() => router.back()} 
+            className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+            type="button"
+          >
+            <ArrowLeft size={16} />
+            <span className="text-sm">戻る</span>
+          </button>
+          <div className="flex items-center space-x-3">
+            <div className="relative flex items-center">
+              <span className="text-xs text-gray-500 mr-1">URL:</span>
+              <input 
+                type="text" 
+                value={slug} 
+                onChange={(e) => setSlug(e.target.value)}
+                className="text-sm py-1 px-2 border border-gray-300 rounded w-40"
+                placeholder="カスタムURL"
+              />
+            </div>
+            <button 
+              onClick={() => handleCreate(true)} 
+              className="text-sm text-gray-600 flex items-center gap-1 px-3 py-1 rounded-full hover:bg-gray-100" 
+              disabled={isSubmitting}
+              type="button"
+            >
+              <Clock size={14} />
+              下書き保存
+            </button>
+            <button 
+              onClick={() => handleCreate(false)} 
+              className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-full text-sm font-medium" 
+              disabled={isSubmitting}
+              type="button"
+            >
+              <Save size={14} />
+              {isSubmitting ? '投稿中...' : '公開する'}
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* 記事編集エリア */}
-      <main className="w-full max-w-2xl mx-auto px-4 py-8 flex-grow">
-        <div className="h-[calc(100vh-150px)] overflow-y-auto">
-          {isPreview ? (
-            <div className="h-full">
-              <h1 className="text-3xl font-bold mb-6 text-gray-900">{title || 'タイトルなし'}</h1>
-              <div className="prose max-w-none">
-                {content ? (
-                  <ReactMarkdown>{content}</ReactMarkdown>
-                ) : (
-                  <p className="text-gray-400 italic">本文を入力するとプレビューが表示されます</p>
-                )}
-              </div>
+      <main className="max-w-2xl mx-auto mt-6 mb-16">
+        <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
+        
+        {croppingImage && imageToEdit && (
+          <ImageCropper imageUrl={imageToEdit} onCancel={() => setCroppingImage(false)} onCrop={handleCropComplete} aspectRatio={16/9} />
+        )}
+
+        {/* アイキャッチ画像エリア */}
+        <div className="relative">
+          {featuredImage ? (
+            <div className="relative w-full h-56 bg-gray-100">
+              <img 
+                src={featuredImage.url} 
+                alt="アイキャッチ画像" 
+                className="w-full h-full object-cover"
+              />
+              <button 
+                onClick={() => setFeaturedImage(null)}
+                className="absolute top-3 right-3 bg-black bg-opacity-60 text-white p-1 rounded-full hover:bg-opacity-80"
+                type="button"
+              >
+                <X size={18} />
+              </button>
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-3 right-3 bg-black bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 flex items-center gap-1"
+                type="button"
+              >
+                <ImageIcon size={16} />
+                <span className="text-xs">変更</span>
+              </button>
             </div>
           ) : (
-            <div className="h-full flex flex-col">
-              <input
-                type="text"
-                placeholder="タイトル"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full text-3xl font-bold mb-4 focus:outline-none border-0 text-gray-900 placeholder-gray-300"
-              />
-              <textarea
-                placeholder="本文をMarkdown形式で入力してください..."
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="w-full flex-grow focus:outline-none border-0 resize-none text-gray-800 placeholder-gray-300 text-lg leading-relaxed"
-              />
+            <div 
+              className="w-full h-32 flex flex-col items-center justify-center bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+            >
+              <ImageIcon size={24} className="text-gray-400 mb-2" />
+              <p className="text-sm text-gray-500">アイキャッチ画像を設定</p>
             </div>
           )}
         </div>
-      </main>
 
-      {/* フッター */}
-      <footer className="w-full border-t border-gray-100 bg-white">
-        <div className="max-w-2xl mx-auto px-4 py-2 flex justify-between items-center">
-          <div className="text-xs text-gray-400">
-            {content && <span>{content.length} 文字</span>}
-          </div>
-          <div className="text-xs text-gray-400">
-            最終編集: {new Date().toLocaleDateString('ja-JP')}
+        <div className="px-4 py-6">
+          <input 
+            type="text" 
+            placeholder="タイトル" 
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)} 
+            className="w-full text-3xl font-bold mb-6 p-0 border-0 focus:outline-none focus:ring-0 placeholder-gray-400"
+          />
+          
+          {/* エディタ部分 */}
+          <div className="prose prose-lg max-w-none">
+            <RichTextEditor 
+              content={content} 
+              setContent={setContent} 
+            />
           </div>
         </div>
-      </footer>
+      </main>
     </div>
   );
 };

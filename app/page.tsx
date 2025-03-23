@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import BackgroundText from './component/BackgroundText';
 import './ui/globals.css';
+import CardItem from './component/CardItem';
 
 export const metadata: Metadata = {
   title: 'Kawa_Web',
@@ -9,22 +10,47 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
+  const cards = [
+    { title: 'ABOUT', desc: '自己紹介ページです。', href: '/about', icon: '👤' },
+    { title: 'BLOG', desc: 'ブログページです。', href: '/blog', icon: '📝' },
+    { title: 'PRODUCT', desc: '作品紹介ページです。', href: '/product', icon: '🎨' }
+  ];
+
   return (
-    <main className="relative w-full h-screen flex flex-col items-center justify-center p-4">
-      <div className="flex flex-row flex-wrap justify-center gap-2 sm:gap-4 md:gap-x-12">
-        <div className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 flex flex-col items-center justify-center bg-white shadow-lg rounded-lg hover:shadow-xl transition-all p-3">
-          <Link href="/about" className="text-sm sm:text-base md:text-lg font-semibold">ABOUT</Link>
-          <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2">自己紹介や説明のページです。</p>
-        </div>
-        <div className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 flex flex-col items-center justify-center bg-white shadow-lg rounded-lg hover:shadow-xl transition-all p-3">
-          <Link href="/blog" className="text-sm sm:text-base md:text-lg font-semibold">BLOG</Link>
-          <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2">ブログページです。</p>
-        </div>
-        <div className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 flex flex-col items-center justify-center bg-white shadow-lg rounded-lg hover:shadow-xl transition-all p-3">
-          <Link href="/product" className="text-sm sm:text-base md:text-lg font-semibold">PRODUCT</Link>
-          <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2">作品を紹介します。</p>
-        </div>
+    <main className="relative w-full h-screen flex flex-col items-center justify-center p-4 overflow-hidden">
+      <Link 
+        href="/login" 
+        className="absolute top-4 right-4 w-6 h-6 rounded-full opacity-10 hover:opacity-80 transition-opacity duration-300"
+        aria-label="隠しログインボタン"
+      >
+        <div className="w-full h-full bg-gray-400 rounded-full"></div>
+      </Link>
+
+      {/* メインコンテンツ */}
+      <div className="relative z-10 mb-6">
+        <h1 className="text-3xl md:text-4xl font-bold text-center text-indigo-900 mb-2">
+          Kawa_Web
+        </h1>
+        <p className="text-sm md:text-base text-center text-gray-600">
+          ようこそ、Kawa_のWebサイトへ
+        </p>
       </div>
+
+      <div className="flex flex-row flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 z-10">
+        {cards.map((item) => (
+          <CardItem 
+            key={item.title}
+            title={item.title}
+            description={item.desc}
+            href={item.href}
+            icon={item.icon}
+          />
+        ))}
+      </div>
+
+      {/* 装飾要素
+      <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-indigo-100 to-transparent opacity-70"></div> */}
+      
       <BackgroundText />
     </main>
   );

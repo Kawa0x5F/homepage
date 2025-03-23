@@ -6,6 +6,7 @@ import Link from 'next/link';
 interface Article {
   id: number;
   title: string;
+  slug: string;
   content: string;
   date: string;
 }
@@ -34,7 +35,7 @@ export default function Blog() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl mt-6">
           {articles.map((article) => (
-            <Link key={article.id} href={`/articles/${article.id}`} className="block">
+            <Link key={article.slug} href={`/blog/${article.slug}`} className="block">
               <div className="bg-white shadow-md rounded-lg overflow-hidden p-4 hover:bg-gray-100 transition">
                 <h2 className="text-xl font-semibold">{article.title}</h2>
                 <p className="text-gray-500 text-sm mt-1">
