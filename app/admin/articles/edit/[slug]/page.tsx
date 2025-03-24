@@ -64,6 +64,27 @@ const EditArticlePage = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/auth/check', { credentials: 'include' });
+        if (res.ok) {
+          setIsAuthenticated(true);
+        } else {
+          router.push('/login'); // 未認証ならログインページへリダイレクト
+        }
+      } catch (error) {
+        console.error('認証チェックエラー:', error);
+        router.push('/login');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  if (!isAuthenticated) return null; // ロード中は何も表示しない
 
   // 記事データの取得
   useEffect(() => {
