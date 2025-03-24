@@ -2,9 +2,10 @@ import Image from "next/image";
 
 type FooterProps = {
   siteName: string;
+  adminName: string;
 };
 
-const Footer: React.FC<FooterProps> = ({ siteName }) => {
+const Footer: React.FC<FooterProps> = ({ siteName, adminName }) => {
   return (
     <footer className="w-full bg-white border-t mt-auto py-6">
       <div className="max-w-5xl mx-auto px-4 text-center text-gray-500 text-sm">
@@ -18,7 +19,7 @@ const Footer: React.FC<FooterProps> = ({ siteName }) => {
           />
           <span className="font-medium">{siteName}</span>
         </div>
-        &copy; {new Date().getFullYear()} {siteName} All Rights Reserved.
+        &copy; {new Date().getFullYear()} {adminName} All Rights Reserved.
       </div>
     </footer>
   );

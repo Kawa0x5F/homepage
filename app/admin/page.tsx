@@ -55,7 +55,7 @@ const AdminPage = () => {
       </main>
 
       {/* フッター */}
-      <Footer siteName="管理者ダッシュボード" />
+      <Footer siteName="管理者ダッシュボード" adminName="Kawa_" />
     </div>
   );
 };

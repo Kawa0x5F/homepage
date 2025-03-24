@@ -136,7 +136,7 @@ export default function ArticlePage() {
       </div>
 
       {/* フッター */}
-      <Footer siteName="Kawa_ Blog" />
+      <Footer siteName="Kawa_ Blog" adminName="Kawa_" />
 
     </main>
   );

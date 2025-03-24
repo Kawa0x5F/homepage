@@ -179,7 +179,7 @@ const AdminArticlePage = () => {
           )}
         </div>
       </main>
-      <Footer siteName="記事管理システム" />
+      <Footer siteName="記事管理システム" adminName="Kawa_" />
     </div>
   );
 };

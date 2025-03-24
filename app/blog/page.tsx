@@ -119,7 +119,7 @@ export default function Blog() {
         )}
       </div>
 
-      <Footer siteName="Kawa_ Blog" />
+      <Footer siteName="Kawa_ Blog" adminName="Kawa_" />
     </main>
   );
 }
