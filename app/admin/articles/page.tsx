@@ -20,6 +20,7 @@ const AdminArticlePage = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -27,10 +28,12 @@ const AdminArticlePage = () => {
         if (res.ok) {
           setIsAuthenticated(true);
         } else {
+          setIsAuthenticated(false);
           router.push('/login'); // 未認証ならログインページへリダイレクト
         }
       } catch (error) {
         console.error('認証チェックエラー:', error);
+        setIsAuthenticated(false);
         router.push('/login');
       }
     };
@@ -38,16 +41,16 @@ const AdminArticlePage = () => {
     checkAuth();
   }, [router]);
 
-  if (!isAuthenticated) return null; // ロード中は何も表示しない
-
   useEffect(() => {
-    fetchArticles();
-  }, []);
+    if (isAuthenticated) {
+      fetchArticles();
+    }
+  }, [isAuthenticated]);
 
   const fetchArticles = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/articles/all');
+      const res = await fetch('http://localhost:8080/articles/all', { credentials: 'include' });
       const data = await res.json();
       if (Array.isArray(data)) {
         // 作成日順に並び替え（新しい記事が上に表示）
@@ -75,7 +78,7 @@ const AdminArticlePage = () => {
 
   const handleDelete = async (slug: string) => {
     try {
-      await fetch(`http://localhost:8080/article/${slug}`, { method: 'DELETE' });
+      await fetch(`http://localhost:8080/article/${slug}`, { method: 'DELETE', credentials: 'include' });
       setDeleteConfirmId(null);
       fetchArticles();
     } catch (error) {

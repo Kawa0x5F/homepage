@@ -28,6 +28,11 @@ interface ApiErrorResponse {
   [key: string]: unknown;
 }
 
+interface FileUploadResponse {
+  image_url: string;
+  message: string;
+}
+
 const CreateArticlePage = () => {
   const router = useRouter();
   const [title, setTitle] = useState<string>('');
@@ -65,47 +70,48 @@ const CreateArticlePage = () => {
   
     if (!isAuthenticated) return null; // ロード中は何も表示しない
   
-  const handleCreate = async (publish = false) => {
-    // 入力検証
-    if (!title.trim()) {
-      setErrorMessage('タイトルは必須です');
-      return;
-    }
-    
-    if (!content.trim()) {
-      setErrorMessage('本文は必須です');
-      return;
-    }
-    
-    if (!slug.trim()) {
-      setErrorMessage('URLの設定は必須です');
-      return;
-    }
-    
-    // 公開と下書きの状態を個別に管理
-    if (publish) {
-      setIsSubmittingPublish(true);
-    } else {
-      setIsSubmittingDraft(true);
-    }
-    
-    setErrorMessage(null);
-    
-    try {
-      // アイキャッチ画像がある場合は先にアップロード処理を行う想定
-      const image_path = featuredImage?.url || null;
+    const handleCreate = async (publish = false) => {
+      // 入力検証
+      if (!title.trim()) {
+        setErrorMessage('タイトルは必須です');
+        return;
+      }
       
-      const response = await fetch('http://localhost:8080/articles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title, 
-          slug, 
-          content,
-          is_publish: publish,
-          image_path
-        }),
-      });
+      if (!content.trim()) {
+        setErrorMessage('本文は必須です');
+        return;
+      }
+      
+      if (!slug.trim()) {
+        setErrorMessage('URLの設定は必須です');
+        return;
+      }
+      
+      // 公開と下書きの状態を個別に管理
+      if (publish) {
+        setIsSubmittingPublish(true);
+      } else {
+        setIsSubmittingDraft(true);
+      }
+      
+      setErrorMessage(null);
+      
+      try {
+        // 画像アップロードのロジックを削除
+        const image_url = featuredImage?.url || null;
+        
+        const response = await fetch('http://localhost:8080/articles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            title, 
+            slug, 
+            content,
+            is_publish: publish,
+            image_url
+          }),
+          credentials: 'include'
+        });
       
       // APIからのエラーレスポンスを処理
       if (!response.ok) {
@@ -127,6 +133,7 @@ const CreateArticlePage = () => {
               tags: tags.length > 0 ? tags : null
             }
           }),
+          credentials: 'include'
         });
         
         if (!tagResponse.ok) {
@@ -148,7 +155,6 @@ const CreateArticlePage = () => {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
@@ -159,12 +165,61 @@ const CreateArticlePage = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleCropComplete = (croppedImageUrl: string, croppedFile?: File) => {
-    setFeaturedImage({
-      url: croppedImageUrl,
-      file: croppedFile || null
-    });
-    setCroppingImage(false);
+  const handleCropComplete = async (croppedImageUrl: string, croppedFile?: File) => {
+    console.log('Crop Complete Called');
+    console.log('Cropped File:', croppedFile);
+  
+    if (!croppedFile) {
+      console.error('No file to upload');
+      setCroppingImage(false);
+      return;
+    }
+  
+    try {
+      const formData = new FormData();
+      formData.append('file', croppedFile, croppedFile.name);
+      
+      // Alternative logging method
+      console.log('FormData details:');
+      console.log('File name:', croppedFile.name);
+      console.log('File size:', croppedFile.size);
+      console.log('File type:', croppedFile.type);
+  
+      // Log raw FormData entries
+      const entries = Array.from(formData.entries());
+      console.log('FormData entries:', entries);
+      
+      const fileResponse = await fetch('http://localhost:8080/file', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      console.log('File upload response status:', fileResponse.status);
+      
+      if (!fileResponse.ok) {
+        const errorText = await fileResponse.text();
+        console.error('File upload error response:', errorText);
+        setErrorMessage(`ファイルアップロードに失敗しました: ${errorText}`);
+        setCroppingImage(false);
+        return;
+      }
+      
+      const fileData = await fileResponse.json() as FileUploadResponse;
+      console.log('File upload response data:', fileData);
+      
+      // Update featured image state
+      setFeaturedImage({
+        url: fileData.image_url,
+        file: croppedFile
+      });
+      
+      setCroppingImage(false);
+    } catch (error) {
+      console.error('画像アップロードエラー:', error);
+      setErrorMessage('画像のアップロード中にエラーが発生しました');
+      setCroppingImage(false);
+    }
   };
 
   // エラーメッセージを閉じる

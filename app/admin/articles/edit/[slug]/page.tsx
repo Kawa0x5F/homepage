@@ -42,7 +42,7 @@ interface ArticleData {
   slug: string;
   content: string;
   is_publish: boolean;
-  image_path?: string | null;
+  image_url?: string | null;
   tags?: Tag[] | string[]; // タグがオブジェクトの配列または文字列の配列の両方に対応
 }
 
@@ -73,10 +73,12 @@ const EditArticlePage = () => {
         if (res.ok) {
           setIsAuthenticated(true);
         } else {
-          router.push('/login'); // 未認証ならログインページへリダイレクト
+          setIsAuthenticated(false);
+          router.push('/login');
         }
       } catch (error) {
         console.error('認証チェックエラー:', error);
+        setIsAuthenticated(false);
         router.push('/login');
       }
     };
@@ -84,43 +86,42 @@ const EditArticlePage = () => {
     checkAuth();
   }, [router]);
 
-  if (!isAuthenticated) return null; // ロード中は何も表示しない
+  // 認証チェックが終わるまで描画を防ぐ
+  if (isAuthenticated === null) return null;
 
   // 記事データの取得
   useEffect(() => {
+    if (!slug || isAuthenticated === false) return;
+
     const fetchArticle = async () => {
-      if (!slug) return;
-      
       try {
-        const response = await fetch(`http://localhost:8080/article/${slug}`);
+        const response = await fetch(`http://localhost:8080/article/${slug}`, { credentials: 'include' });
         if (!response.ok) {
           throw new Error('記事の取得に失敗しました');
         }
-        
+
         const article: ArticleData = await response.json();
-        
+
         setTitle(article.title || '');
         setContent(article.content || '');
         setArticleSlug(slug);
-        
-        if (article.image_path) {
+
+        if (article.image_url) {
           setFeaturedImage({
-            url: article.image_path,
+            url: article.image_url,
             file: null
           });
         }
-        
+
         // タグ情報の処理を修正
         if (article.tags && Array.isArray(article.tags)) {
-          // タグがオブジェクト配列の場合は tag_name を抽出
           if (typeof article.tags[0] === 'object') {
             setTags(article.tags.map((tag: any) => tag.tag_name || ''));
           } else {
-            // すでに文字列配列の場合はそのまま使用
             setTags(article.tags as string[]);
           }
         }
-        
+
         setIsLoading(false);
       } catch (error) {
         console.error('記事取得エラー:', error);
@@ -128,9 +129,9 @@ const EditArticlePage = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchArticle();
-  }, [slug]);
+  }, [slug, isAuthenticated]);
 
   const handleUpdate = async (publish = false) => {
     // 入力検証

@@ -6,7 +6,7 @@ import Cropper from 'react-cropper';
 interface ImageCropperProps {
   imageUrl: string;
   onCancel: () => void;
-  onCrop: (croppedImageUrl: string) => void;
+  onCrop: (croppedImageUrl: string, croppedFile?: File) => void;
   aspectRatio?: number;
 }
 
@@ -57,8 +57,24 @@ const ImageCropper: FC<ImageCropperProps> = ({
       // base64 形式で切り抜かれた画像を取得
       const croppedCanvas = cropperRef.current.cropper.getCroppedCanvas();
       if (croppedCanvas) {
-        const croppedImageUrl = croppedCanvas.toDataURL();
-        onCrop(croppedImageUrl);
+        // croppedImageUrl を base64 で取得
+        const croppedImageUrl = croppedCanvas.toDataURL('image/jpeg');
+
+        // Canvas から File オブジェクトを作成
+        croppedCanvas.toBlob((blob: Blob | null) => {
+          if (blob) {
+            const croppedFile = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' });
+            
+            // デバッグ用ログ
+            console.log('Cropped Image URL:', croppedImageUrl);
+            console.log('Cropped File:', croppedFile);
+
+            // File と URL の両方を渡す
+            onCrop(croppedImageUrl, croppedFile);
+          } else {
+            console.error('Blob creation failed');
+          }
+        }, 'image/jpeg');
       }
     }
   };
