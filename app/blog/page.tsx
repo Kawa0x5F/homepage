@@ -28,11 +28,15 @@ export default function Blog() {
     fetch('http://localhost:8080/articles/publish')
       .then((res) => res.json())
       .then((data: unknown) => {
-        setArticles(data as Article[]);
+        const sortedArticles = (data as Article[]).sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setArticles(sortedArticles);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+  
 
   useEffect(() => {
     fetch('http://localhost:8080/tags/all')
