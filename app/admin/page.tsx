@@ -1,7 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import '@/app/ui/globals.css';
+import Footer from '@/app/component/Footer';
 
 const AdminPage = () => {
   const router = useRouter();
@@ -31,7 +31,16 @@ const AdminPage = () => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* ヘッダー */}
       <header className="bg-white shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-6">
+        <div className="max-w-5xl mx-auto px-4 py-6 relative flex items-center justify-center">
+          <div className="absolute left-4">
+            <a href="/">
+              <img 
+                src="/images/kawa_logo.png" 
+                alt="Kawa Logo" 
+                className="h-10 w-auto cursor-pointer" 
+              />
+            </a>
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">管理者ダッシュボード</h1>
         </div>
       </header>
@@ -46,13 +55,7 @@ const AdminPage = () => {
       </main>
 
       {/* フッター */}
-      <footer className="bg-white border-t border-gray-200 mt-auto">
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <p className="text-center text-sm text-gray-500">
-            管理者ダッシュボード &copy; {new Date().getFullYear()}
-          </p>
-        </div>
-      </footer>
+      <Footer siteName="管理者ダッシュボード" />
     </div>
   );
 };

@@ -101,7 +101,9 @@ const CreateArticlePage = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             slug,
-            tags: tags.length > 0 ? tags : null
+            tags: {
+              tags: tags.length > 0 ? tags : null
+            }
           }),
         });
         
