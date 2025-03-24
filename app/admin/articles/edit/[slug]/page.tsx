@@ -8,73 +8,103 @@ import {
   Save, 
   Image as ImageIcon,
   X,
-  AlertCircle
+  AlertCircle,
+  Tag as TagIcon,
+  Plus
 } from 'lucide-react';
 import RichTextEditor from '@/app/component/RichTextEditor';
 import ImageCropper from '@/app/component/ImageCropper';
-import '@/app/ui/globals.css';
 
-// 型定義
-interface Article {
-  id: number;
-  title: string;
-  slug: string;
-  content: string;
-  image_path?: string | null;
-}
-
+// 型定義を追加
 interface FeaturedImage {
   url: string;
   file: File | null;
 }
 
+// APIのエラーレスポンス型を定義
 interface ApiErrorResponse {
   message?: string;
   error?: string;
   [key: string]: unknown;
 }
 
+// タグの型定義を追加
+interface Tag {
+  id: number;
+  tag_name: string;
+  date?: string;
+}
+
+// 記事データの型定義を修正
+interface ArticleData {
+  id: number;
+  title: string;
+  slug: string;
+  content: string;
+  is_publish: boolean;
+  image_path?: string | null;
+  tags?: Tag[] | string[]; // タグがオブジェクトの配列または文字列の配列の両方に対応
+}
+
 const EditArticlePage = () => {
   const router = useRouter();
-  const { slug } = useParams();
+  const params = useParams();
+  const slug = params?.slug as string;
+  
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
-  const [currentSlug, setCurrentSlug] = useState<string>('');
+  const [articleSlug, setArticleSlug] = useState<string>('');
   const [isSubmittingPublish, setIsSubmittingPublish] = useState<boolean>(false);
   const [isSubmittingDraft, setIsSubmittingDraft] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [featuredImage, setFeaturedImage] = useState<FeaturedImage | null>(null);
   const [croppingImage, setCroppingImage] = useState<boolean>(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 記事データの取得
   useEffect(() => {
-    if (!slug) return;
-    
     const fetchArticle = async () => {
+      if (!slug) return;
+      
       try {
-        const res = await fetch(`http://localhost:8080/article/${slug}`);
-        if (!res.ok) {
+        const response = await fetch(`http://localhost:8080/article/${slug}`);
+        if (!response.ok) {
           throw new Error('記事の取得に失敗しました');
         }
         
-        const data: Article = await res.json();
-        if (data) {
-          setTitle(data.title);
-          setContent(data.content);
-          setCurrentSlug(data.slug || String(slug));
-          
-          // アイキャッチ画像があれば設定
-          if (data.image_path) {
-            setFeaturedImage({
-              url: data.image_path,
-              file: null
-            });
+        const article: ArticleData = await response.json();
+        
+        setTitle(article.title || '');
+        setContent(article.content || '');
+        setArticleSlug(slug);
+        
+        if (article.image_path) {
+          setFeaturedImage({
+            url: article.image_path,
+            file: null
+          });
+        }
+        
+        // タグ情報の処理を修正
+        if (article.tags && Array.isArray(article.tags)) {
+          // タグがオブジェクト配列の場合は tag_name を抽出
+          if (typeof article.tags[0] === 'object') {
+            setTags(article.tags.map((tag: any) => tag.tag_name || ''));
+          } else {
+            // すでに文字列配列の場合はそのまま使用
+            setTags(article.tags as string[]);
           }
         }
-      } catch (err) {
-        console.error(err);
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('記事取得エラー:', error);
         setErrorMessage('記事の取得に失敗しました');
+        setIsLoading(false);
       }
     };
     
@@ -90,6 +120,11 @@ const EditArticlePage = () => {
     
     if (!content.trim()) {
       setErrorMessage('本文は必須です');
+      return;
+    }
+    
+    if (!slug.trim()) {
+      setErrorMessage('URLが設定されていません');
       return;
     }
     
@@ -111,6 +146,7 @@ const EditArticlePage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           title, 
+          slug,
           content,
           is_publish: publish,
           image_path
@@ -126,9 +162,23 @@ const EditArticlePage = () => {
         return;
       }
       
+      // タグ情報の更新 (PATCHメソッドでタグのみを更新)
+      const tagResponse = await fetch(`http://localhost:8080/tags/article/${slug}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tags
+        }),
+      });
+      
+      if (!tagResponse.ok) {
+        console.error('タグ更新エラー:', tagResponse.statusText);
+        // タグのエラーは表示せず、記事は更新済みなのでリダイレクト
+      }
+      
       router.push('/admin/articles');
     } catch (error) {
-      console.error('更新エラー:', error);
+      console.error('記事更新エラー:', error);
       setErrorMessage('サーバーとの通信中にエラーが発生しました');
       setIsSubmittingPublish(false);
       setIsSubmittingDraft(false);
@@ -161,6 +211,39 @@ const EditArticlePage = () => {
   const dismissError = () => {
     setErrorMessage(null);
   };
+  
+  // タグ追加処理
+  const addTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 3) {
+      setTags([...tags, trimmedTag]);
+      setTagInput('');
+    }
+  };
+
+  // Enterキーでタグを追加
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  // タグ削除処理
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-3 text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -184,7 +267,7 @@ const EditArticlePage = () => {
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <button 
-            onClick={() => router.push('/admin/articles')} 
+            onClick={() => router.back()} 
             className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
             type="button"
           >
@@ -196,7 +279,7 @@ const EditArticlePage = () => {
               <span className="text-xs text-gray-500 mr-1">URL:</span>
               <input 
                 type="text" 
-                value={currentSlug} 
+                value={articleSlug} 
                 disabled
                 className="text-sm py-1 px-2 border border-gray-300 rounded w-40 bg-gray-50"
                 placeholder="カスタムURL"
@@ -279,12 +362,59 @@ const EditArticlePage = () => {
             className="w-full text-3xl font-bold mb-6 p-0 border-0 focus:outline-none focus:ring-0 placeholder-gray-400"
           />
           
-          {/* リッチテキストエディタに現在のコンテンツをセット */}
+          {/* タグ入力エリア */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <TagIcon size={16} className="text-gray-500" />
+              <span className="text-sm text-gray-600">タグ（最大3つ）</span>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tags.map(tag => (
+                <div 
+                  key={tag}
+                  className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm"
+                >
+                  <span className="text-gray-800">{tag}</span>
+                  <button
+                    onClick={() => removeTag(tag)}
+                    className="ml-2 text-gray-500 hover:text-gray-700"
+                    type="button"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            {tags.length < 3 && (
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagInputKeyDown}
+                  placeholder="タグを入力"
+                  className="flex-1 text-sm py-1.5 px-3 border border-gray-300 rounded-l focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  disabled={tags.length >= 3}
+                />
+                <button
+                  onClick={addTag}
+                  className="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-r border border-l-0 border-gray-300"
+                  type="button"
+                  disabled={!tagInput.trim() || tags.length >= 3}
+                >
+                  <Plus size={16} className="text-gray-600" />
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {/* エディタ部分 */}
           <div className="prose prose-lg max-w-none">
             <RichTextEditor 
               content={content} 
               setContent={setContent} 
-              initialContent={content}
             />
           </div>
         </div>

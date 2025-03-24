@@ -8,7 +8,9 @@ import {
   Save, 
   Image as ImageIcon,
   X,
-  AlertCircle
+  AlertCircle,
+  Tag as TagIcon,
+  Plus
 } from 'lucide-react';
 import RichTextEditor from '@/app/component/RichTextEditor';
 import ImageCropper from '@/app/component/ImageCropper';
@@ -37,6 +39,8 @@ const CreateArticlePage = () => {
   const [croppingImage, setCroppingImage] = useState<boolean>(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleCreate = async (publish = false) => {
@@ -90,6 +94,24 @@ const CreateArticlePage = () => {
         return;
       }
       
+      // タグがある場合は、タグを送信
+      if (tags.length > 0) {
+        const tagResponse = await fetch('http://localhost:8080/tags/article', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slug,
+            tags: tags.length > 0 ? tags : null
+          }),
+        });
+        
+        if (!tagResponse.ok) {
+          const tagErrorData = await tagResponse.json() as ApiErrorResponse;
+          console.error('タグ保存エラー:', tagErrorData);
+          // タグのエラーは表示せず、記事は保存済みなのでリダイレクト
+        }
+      }
+      
       router.push('/admin/articles');
     } catch (error) {
       console.error('投稿エラー:', error);
@@ -124,6 +146,28 @@ const CreateArticlePage = () => {
   // エラーメッセージを閉じる
   const dismissError = () => {
     setErrorMessage(null);
+  };
+
+  // タグ追加処理
+  const addTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 3) {
+      setTags([...tags, trimmedTag]);
+      setTagInput('');
+    }
+  };
+
+  // Enterキーでタグを追加
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  // タグ削除処理
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
   return (
@@ -242,6 +286,54 @@ const CreateArticlePage = () => {
             onChange={(e) => setTitle(e.target.value)} 
             className="w-full text-3xl font-bold mb-6 p-0 border-0 focus:outline-none focus:ring-0 placeholder-gray-400"
           />
+          
+          {/* タグ入力エリア */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <TagIcon size={16} className="text-gray-500" />
+              <span className="text-sm text-gray-600">タグ（最大3つ）</span>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tags.map(tag => (
+                <div 
+                  key={tag}
+                  className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm"
+                >
+                  <span className="text-gray-800">{tag}</span>
+                  <button
+                    onClick={() => removeTag(tag)}
+                    className="ml-2 text-gray-500 hover:text-gray-700"
+                    type="button"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            {tags.length < 3 && (
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagInputKeyDown}
+                  placeholder="タグを入力"
+                  className="flex-1 text-sm py-1.5 px-3 border border-gray-300 rounded-l focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  disabled={tags.length >= 3}
+                />
+                <button
+                  onClick={addTag}
+                  className="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-r border border-l-0 border-gray-300"
+                  type="button"
+                  disabled={!tagInput.trim() || tags.length >= 3}
+                >
+                  <Plus size={16} className="text-gray-600" />
+                </button>
+              </div>
+            )}
+          </div>
           
           {/* エディタ部分 */}
           <div className="prose prose-lg max-w-none">
