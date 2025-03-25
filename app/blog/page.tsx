@@ -60,7 +60,7 @@ export default function Blog() {
       <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between px-4">
           <Link href="/blog" className="flex items-center">
-            <h1 className="text-2xl font-bold text-gray-800">Kawa Blog</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Kawa_ Blog</h1>
           </Link>
           <div className="flex space-x-2">
             <Link href="/" className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition">TOP</Link>

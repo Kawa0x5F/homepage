@@ -13,7 +13,7 @@ const Footer: React.FC<FooterProps> = ({ siteName, adminName }) => {
         <div className="flex items-center justify-center mb-3">
           <Link href="/">
             <Image
-              src="/images/kawa_logo.png"
+              src="/images/kawa_logo.svg"
               alt="Kawa Logo"
               width={40}
               height={40}
