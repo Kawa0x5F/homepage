@@ -177,7 +177,7 @@ const CreateArticlePage = () => {
       const formData = new FormData();
       formData.append('file', croppedFile, croppedFile.name);
       
-      const fileResponse = await fetch('http://localhost:8080/file', {
+      const fileResponse = await fetch('http://localhost:8080/image', {
         method: 'POST',
         body: formData,
         credentials: 'include'
