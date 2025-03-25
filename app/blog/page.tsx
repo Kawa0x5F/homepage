@@ -61,7 +61,7 @@ export default function Blog() {
       <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 py-2">
         <div className="max-w-5xl mx-auto flex items-center justify-between px-4">
           <Link href="/blog" className="flex items-center">
-            <h1 className="text-2xl font-bold text-gray-800">Kawa_ Blog</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Kawa Blog</h1>
           </Link>
           <div className="flex space-x-2">
             <Link href="/" className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition">TOP</Link>
@@ -96,11 +96,11 @@ export default function Blog() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {filteredArticles.map((article) => (
               <Link key={article.slug} href={`/blog/${article.slug}`} className="block">
-                <div className="bg-white shadow-md rounded-lg overflow-hidden p-6 hover:shadow-lg transition duration-300 h-full flex flex-col">
+                <div className="bg-white shadow-md rounded-lg overflow-hidden p-4 hover:shadow-lg transition duration-300 h-full flex flex-col">
                 <img 
                   src={article.image_url || "https://storage.kawa0x5f.com/kawa_logo.png"} 
                   alt={article.title} 
-                  className="w-full h-48 object-cover rounded-md"
+                  className="w-full  object-cover"
                 />
                   <h2 className="text-xl font-semibold line-clamp-2">{article.title}</h2>
                   {article.tags && (
