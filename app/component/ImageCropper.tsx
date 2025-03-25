@@ -1,171 +1,175 @@
-'use client';
-import { FC, useState, useRef } from 'react';
-import { X, Check, ZoomIn, ZoomOut, RotateCw, RefreshCw } from 'lucide-react';
-import Cropper from 'react-cropper';
+import React from 'react';
+import Cropper from 'react-easy-crop';
+import { Area } from 'react-easy-crop';
+import { X, Check, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface ImageCropperProps {
   imageUrl: string;
-  onCancel: () => void;
-  onCrop: (croppedImageUrl: string, croppedFile?: File) => void;
   aspectRatio?: number;
+  maxFileSize?: number;
+  onCancel: () => void;
+  onCrop: (croppedFile: File) => void;
 }
 
-const ImageCropper: FC<ImageCropperProps> = ({ 
+const ImageCropper = ({ 
   imageUrl, 
+  aspectRatio = 16 / 9,
+  maxFileSize = 5 * 1024 * 1024,
   onCancel, 
-  onCrop,
-  aspectRatio = 16/9 
-}) => {
-  const cropperRef = useRef<any>(null);
-  const [zoom, setZoom] = useState(0);
+  onCrop 
+}: ImageCropperProps): React.ReactElement => {
+  const [crop, setCrop] = React.useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = React.useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = React.useState<Area | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const handleZoomIn = () => {
-    if (cropperRef.current && cropperRef.current.cropper) {
-      cropperRef.current.cropper.zoom(0.1);
-      setZoom(prev => prev + 0.1);
-    }
-  };
+  const onCropComplete = React.useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
-  const handleZoomOut = () => {
-    if (cropperRef.current && cropperRef.current.cropper) {
-      cropperRef.current.cropper.zoom(-0.1);
-      setZoom(prev => prev - 0.1);
-    }
-  };
-
-  const handleRotateRight = () => {
-    if (cropperRef.current && cropperRef.current.cropper) {
-      cropperRef.current.cropper.rotate(90);
-    }
-  };
-
-  const handleRotateLeft = () => {
-    if (cropperRef.current && cropperRef.current.cropper) {
-      cropperRef.current.cropper.rotate(-90);
-    }
-  };
-
-  const handleReset = () => {
-    if (cropperRef.current && cropperRef.current.cropper) {
-      cropperRef.current.cropper.reset();
-      setZoom(0);
-    }
-  };
-
-  const handleCrop = () => {
-    if (cropperRef.current && cropperRef.current.cropper) {
-      // base64 形式で切り抜かれた画像を取得
-      const croppedCanvas = cropperRef.current.cropper.getCroppedCanvas();
-      if (croppedCanvas) {
-        // croppedImageUrl を base64 で取得
-        const croppedImageUrl = croppedCanvas.toDataURL('image/jpeg');
-
-        // Canvas から File オブジェクトを作成
-        croppedCanvas.toBlob((blob: Blob | null) => {
-          if (blob) {
-            const croppedFile = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' });
-            
-            // デバッグ用ログ
-            console.log('Cropped Image URL:', croppedImageUrl);
-            console.log('Cropped File:', croppedFile);
-
-            // File と URL の両方を渡す
-            onCrop(croppedImageUrl, croppedFile);
-          } else {
-            console.error('Blob creation failed');
-          }
-        }, 'image/jpeg');
+  const getCroppedImg = async (imageSrc: string, pixelCrop: Area): Promise<Blob> => {
+    // base64形式の画像かどうかを判定
+    const isBase64 = imageSrc.startsWith('data:image');
+    
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      
+      // base64の場合はcrossOriginを設定しない
+      if (!isBase64) {
+        img.crossOrigin = 'anonymous';
       }
+      
+      img.onload = () => resolve(img);
+      img.onerror = (error) => {
+        console.error('画像読み込みエラー:', error);
+        console.error('エラーが発生した画像URL:', imageSrc);
+        reject(new Error(`画像の読み込みに失敗しました: ${imageSrc}`));
+      };
+      img.src = imageSrc;
+    });
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      console.error('エラーが発生した画像URL:', imageSrc);
+      throw new Error('キャンバスコンテキストが利用できません');
+    }
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          console.error('エラーが発生した画像URL:', imageSrc);
+          reject(new Error('Blobの作成に失敗しました'));
+        } else {
+          resolve(blob);
+        }
+      }, 'image/jpeg', 0.85);
+    });
+  };
+
+  const handleCropConfirm = async () => {
+    if (!croppedAreaPixels) {
+      setError('トリミング領域が選択されていません');
+      return;
+    }
+
+    try {
+      const croppedBlob = await getCroppedImg(imageUrl, croppedAreaPixels);
+      
+      if (croppedBlob.size > maxFileSize) {
+        setError(`ファイルサイズが大きすぎます。${maxFileSize / 1024 / 1024}MB以下にしてください。`);
+        return;
+      }
+
+      const croppedFile = new File([croppedBlob], 'cropped-image.jpg', { 
+        type: 'image/jpeg' 
+      });
+
+      // URLを作成せず、Fileオブジェクトを直接渡す
+      onCrop(croppedFile);
+    } catch (error) {
+      console.error('画像トリミングエラー:', error);
+      console.error('エラーが発生した画像URL:', imageUrl);
+      setError('画像のトリミングに失敗しました');
     }
   };
+
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 3));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 1));
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-full overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-medium">アイキャッチ画像のトリミング</h3>
-          <button 
-            onClick={onCancel} 
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X size={20} />
-          </button>
-        </div>
-        
-        <div className="p-4 flex-grow overflow-hidden bg-gray-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50 p-4">
+      <div className="relative w-full max-w-3xl bg-white rounded-lg shadow-2xl overflow-hidden">
+        {error && (
+          <div className="absolute top-4 left-4 right-4 bg-red-100 border border-red-300 text-red-700 p-2 rounded z-10">
+            {error}
+            <button 
+              onClick={() => setError(null)}
+              className="absolute top-1 right-1 text-red-700 hover:text-red-900"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        <div className="relative w-full h-[500px] bg-gray-100">
           <Cropper
-            ref={cropperRef}
-            src={imageUrl}
-            style={{ height: 400, width: '100%' }}
-            aspectRatio={aspectRatio}
-            guides={true}
-            background={false}
-            responsive={true}
-            checkOrientation={false}
-            zoomable={true}
-            rotatable={true}
-            movable={true}
-            viewMode={1}
-            minCropBoxHeight={50}
-            minCropBoxWidth={50}
+            image={imageUrl}
+            crop={crop}
+            zoom={zoom}
+            aspect={aspectRatio}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
           />
         </div>
-        
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
-          <div className="flex space-x-2">
-            <button 
-              onClick={handleZoomOut}
-              className="p-2 rounded hover:bg-gray-200 text-gray-700"
-              title="縮小"
-              disabled={zoom <= -0.9}
-            >
-              <ZoomOut size={20} />
-            </button>
-            <button 
-              onClick={handleZoomIn}
-              className="p-2 rounded hover:bg-gray-200 text-gray-700"
-              title="拡大"
-            >
-              <ZoomIn size={20} />
-            </button>
-            <button 
-              onClick={handleRotateLeft}
-              className="p-2 rounded hover:bg-gray-200 text-gray-700"
-              title="左に回転"
-            >
-              <RotateCw size={20} className="transform -scale-x-100" />
-            </button>
-            <button 
-              onClick={handleRotateRight}
-              className="p-2 rounded hover:bg-gray-200 text-gray-700"
-              title="右に回転"
-            >
-              <RotateCw size={20} />
-            </button>
-            <button 
-              onClick={handleReset}
-              className="p-2 rounded hover:bg-gray-200 text-gray-700"
-              title="リセット"
-            >
-              <RefreshCw size={20} />
-            </button>
-          </div>
-          
-          <div className="flex space-x-2">
-            <button 
-              onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
-            >
-              キャンセル
-            </button>
-            <button 
-              onClick={handleCrop}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
-            >
-              <Check size={16} className="mr-1" />
-              適用
-            </button>
-          </div>
+
+        <div className="absolute top-4 right-4 flex items-center space-x-2">
+          <button 
+            onClick={handleZoomOut} 
+            className="bg-white/80 p-2 rounded-full hover:bg-white/90"
+            disabled={zoom <= 1}
+          >
+            <ZoomOut size={20} className="text-gray-700" />
+          </button>
+          <button 
+            onClick={handleZoomIn} 
+            className="bg-white/80 p-2 rounded-full hover:bg-white/90"
+            disabled={zoom >= 3}
+          >
+            <ZoomIn size={20} className="text-gray-700" />
+          </button>
+        </div>
+
+        <div className="flex justify-between p-4 bg-gray-50">
+          <button 
+            onClick={onCancel} 
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-md"
+          >
+            <X size={16} />キャンセル
+          </button>
+          <button 
+            onClick={handleCropConfirm} 
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            <Check size={16} />画像を選択
+          </button>
         </div>
       </div>
     </div>

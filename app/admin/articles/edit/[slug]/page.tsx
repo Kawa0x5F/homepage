@@ -35,6 +35,10 @@ interface Tag {
   date?: string;
 }
 
+interface FileUploadResponse {
+  image_url: string;
+}
+
 // 記事データの型定義を修正
 interface ArticleData {
   id: number;
@@ -221,12 +225,44 @@ const EditArticlePage = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleCropComplete = (croppedImageUrl: string, croppedFile?: File) => {
-    setFeaturedImage({
-      url: croppedImageUrl,
-      file: croppedFile || null
-    });
-    setCroppingImage(false);
+  const handleCropComplete = async (croppedFile: File) => {
+    if (!croppedFile) {
+      setErrorMessage('画像の処理に失敗しました');
+      setCroppingImage(false);
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', croppedFile, croppedFile.name);
+      
+      const fileResponse = await fetch('http://localhost:8080/file', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!fileResponse.ok) {
+        const errorText = await fileResponse.text();
+        setErrorMessage(`ファイルアップロードに失敗しました: ${errorText}`);
+        setCroppingImage(false);
+        return;
+      }
+      
+      const fileData = await fileResponse.json() as FileUploadResponse;
+      
+      // 画像の状態を更新
+      setFeaturedImage({
+        url: fileData.image_url,
+        file: croppedFile
+      });
+      
+      setCroppingImage(false);
+    } catch (error) {
+      console.error('画像アップロードエラー:', error);
+      setErrorMessage('画像のアップロード中にエラーが発生しました');
+      setCroppingImage(false);
+    }
   };
 
   // エラーメッセージを閉じる

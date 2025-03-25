@@ -15,22 +15,19 @@ import {
 import RichTextEditor from '@/app/component/RichTextEditor';
 import ImageCropper from '@/app/component/ImageCropper';
 
-// 型定義を追加
+// 型定義
 interface FeaturedImage {
   url: string;
   file: File | null;
 }
 
-// APIのエラーレスポンス型を定義
 interface ApiErrorResponse {
   message?: string;
   error?: string;
-  [key: string]: unknown;
 }
 
 interface FileUploadResponse {
   image_url: string;
-  message: string;
 }
 
 const CreateArticlePage = () => {
@@ -48,7 +45,7 @@ const CreateArticlePage = () => {
   const [tagInput, setTagInput] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
     useEffect(() => {
       const checkAuth = async () => {
@@ -152,9 +149,12 @@ const CreateArticlePage = () => {
     }
   };
 
+
+  // 画像選択ハンドラ
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
@@ -165,29 +165,17 @@ const CreateArticlePage = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleCropComplete = async (croppedImageUrl: string, croppedFile?: File) => {
-    console.log('Crop Complete Called');
-    console.log('Cropped File:', croppedFile);
-  
+  // トリミング完了ハンドラ
+  const handleCropComplete = async (croppedFile: File) => {
     if (!croppedFile) {
-      console.error('No file to upload');
+      setErrorMessage('画像の処理に失敗しました');
       setCroppingImage(false);
       return;
     }
-  
+
     try {
       const formData = new FormData();
       formData.append('file', croppedFile, croppedFile.name);
-      
-      // Alternative logging method
-      console.log('FormData details:');
-      console.log('File name:', croppedFile.name);
-      console.log('File size:', croppedFile.size);
-      console.log('File type:', croppedFile.type);
-  
-      // Log raw FormData entries
-      const entries = Array.from(formData.entries());
-      console.log('FormData entries:', entries);
       
       const fileResponse = await fetch('http://localhost:8080/file', {
         method: 'POST',
@@ -195,20 +183,16 @@ const CreateArticlePage = () => {
         credentials: 'include'
       });
       
-      console.log('File upload response status:', fileResponse.status);
-      
       if (!fileResponse.ok) {
         const errorText = await fileResponse.text();
-        console.error('File upload error response:', errorText);
         setErrorMessage(`ファイルアップロードに失敗しました: ${errorText}`);
         setCroppingImage(false);
         return;
       }
       
       const fileData = await fileResponse.json() as FileUploadResponse;
-      console.log('File upload response data:', fileData);
       
-      // Update featured image state
+      // 画像の状態を更新
       setFeaturedImage({
         url: fileData.image_url,
         file: croppedFile
@@ -315,7 +299,12 @@ const CreateArticlePage = () => {
         <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
         
         {croppingImage && imageToEdit && (
-          <ImageCropper imageUrl={imageToEdit} onCancel={() => setCroppingImage(false)} onCrop={handleCropComplete} aspectRatio={16/9} />
+          <ImageCropper 
+            imageUrl={imageToEdit} 
+            onCancel={() => setCroppingImage(false)} 
+            onCrop={handleCropComplete} 
+            aspectRatio={16/9} 
+          />
         )}
 
         {/* アイキャッチ画像エリア */}
