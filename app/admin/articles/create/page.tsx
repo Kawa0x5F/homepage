@@ -47,108 +47,131 @@ const CreateArticlePage = () => {
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
-    useEffect(() => {
-      const checkAuth = async () => {
-        try {
-          const res = await fetch('http://localhost:8080/auth/check', { credentials: 'include' });
-          if (res.ok) {
-            setIsAuthenticated(true);
-          } else {
-            router.push('/login'); // 未認証ならログインページへリダイレクト
-          }
-        } catch (error) {
-          console.error('認証チェックエラー:', error);
-          router.push('/login');
-        }
-      };
-  
-      checkAuth();
-    }, [router]);
-  
-    if (!isAuthenticated) return null; // ロード中は何も表示しない
-  
-    const handleCreate = async (publish = false) => {
-      // 入力検証
-      if (!title.trim()) {
-        setErrorMessage('タイトルは必須です');
-        return;
-      }
-      
-      if (!content.trim()) {
-        setErrorMessage('本文は必須です');
-        return;
-      }
-      
-      if (!slug.trim()) {
-        setErrorMessage('URLの設定は必須です');
-        return;
-      }
-      
-      // 公開と下書きの状態を個別に管理
-      if (publish) {
-        setIsSubmittingPublish(true);
-      } else {
-        setIsSubmittingDraft(true);
-      }
-      
-      setErrorMessage(null);
-      
-      try {
-        // 画像アップロードのロジックを削除
-        const image_url = featuredImage?.url || null;
-        
-        const response = await fetch('http://localhost:8080/articles', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            title, 
-            slug, 
-            content,
-            is_publish: publish,
-            image_url
-          }),
-          credentials: 'include'
-        });
-      
-      // APIからのエラーレスポンスを処理
+  // 画像削除処理の追加
+  const deleteImage = async (imageUrl: string) => {
+    try {
+      const response = await fetch('http://localhost:8080/image', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: imageUrl }),
+        credentials: 'include'
+      });
+
       if (!response.ok) {
         const errorData = await response.json() as ApiErrorResponse;
-        setErrorMessage(errorData.message || errorData.error || 'エラーが発生しました');
-        setIsSubmittingPublish(false);
-        setIsSubmittingDraft(false);
-        return;
+        console.error('画像削除エラー:', errorData);
       }
-      
-      // タグがある場合は、タグを送信
-      if (tags.length > 0) {
-        const tagResponse = await fetch('http://localhost:8080/tags/article', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            slug,
-            tags: {
-              tags: tags.length > 0 ? tags : null
-            }
-          }),
-          credentials: 'include'
-        });
-        
-        if (!tagResponse.ok) {
-          const tagErrorData = await tagResponse.json() as ApiErrorResponse;
-          console.error('タグ保存エラー:', tagErrorData);
-          // タグのエラーは表示せず、記事は保存済みなのでリダイレクト
-        }
-      }
-      
-      router.push('/admin/articles');
     } catch (error) {
-      console.error('投稿エラー:', error);
-      setErrorMessage('サーバーとの通信中にエラーが発生しました');
-      setIsSubmittingPublish(false);
-      setIsSubmittingDraft(false);
+      console.error('画像削除中にエラーが発生しました:', error);
     }
   };
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/auth/check', { credentials: 'include' });
+        if (res.ok) {
+          setIsAuthenticated(true);
+        } else {
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('認証チェックエラー:', error);
+        router.push('/login');
+      }
+    };
 
+    checkAuth();
+
+    // コンポーネントのクリーンアップ時に未保存の画像を削除
+    return () => {
+      if (featuredImage?.url) {
+        deleteImage(featuredImage.url);
+      }
+    };
+  }, [router, featuredImage]);
+
+  if (!isAuthenticated) return null;
+
+  const handleCreate = async (publish = false) => {
+    // 入力検証
+    if (!title.trim()) {
+      setErrorMessage('タイトルは必須です');
+      return;
+    }
+    
+    if (!content.trim()) {
+      setErrorMessage('本文は必須です');
+      return;
+    }
+    
+    if (!slug.trim()) {
+      setErrorMessage('URLの設定は必須です');
+      return;
+    }
+    
+    // 公開と下書きの状態を個別に管理
+    if (publish) {
+      setIsSubmittingPublish(true);
+    } else {
+      setIsSubmittingDraft(true);
+    }
+    
+    setErrorMessage(null);
+    
+    try {
+      const image_url = featuredImage?.url || null;
+      
+      const response = await fetch('http://localhost:8080/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title, 
+          slug, 
+          content,
+          is_publish: publish,
+          image_url
+        }),
+        credentials: 'include'
+      });
+    
+    // APIからのエラーレスポンスを処理
+    if (!response.ok) {
+      const errorData = await response.json() as ApiErrorResponse;
+      setErrorMessage(errorData.message || errorData.error || 'エラーが発生しました');
+      setIsSubmittingPublish(false);
+      setIsSubmittingDraft(false);
+      return;
+    }
+    
+    // タグがある場合は、タグを送信
+    if (tags.length > 0) {
+      const tagResponse = await fetch('http://localhost:8080/tags/article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          tags: {
+            tags: tags.length > 0 ? tags : null
+          }
+        }),
+        credentials: 'include'
+      });
+      
+      if (!tagResponse.ok) {
+        const tagErrorData = await tagResponse.json() as ApiErrorResponse;
+        console.error('タグ保存エラー:', tagErrorData);
+      }
+    }
+    
+    router.push('/admin/articles');
+  } catch (error) {
+    console.error('投稿エラー:', error);
+    setErrorMessage('サーバーとの通信中にエラーが発生しました');
+    setIsSubmittingPublish(false);
+    setIsSubmittingDraft(false);
+  }
+};
 
   // 画像選択ハンドラ
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,6 +197,11 @@ const CreateArticlePage = () => {
     }
 
     try {
+      // 既存の画像があれば削除
+      if (featuredImage?.url) {
+        await deleteImage(featuredImage.url);
+      }
+
       const formData = new FormData();
       formData.append('file', croppedFile, croppedFile.name);
       
@@ -204,6 +232,23 @@ const CreateArticlePage = () => {
       setErrorMessage('画像のアップロード中にエラーが発生しました');
       setCroppingImage(false);
     }
+  };
+
+  // 画像を削除するハンドラ
+  const handleRemoveImage = async () => {
+    if (featuredImage?.url) {
+      await deleteImage(featuredImage.url);
+      setFeaturedImage(null);
+    }
+  };
+
+  // 戻るボタンのハンドラ（画像削除を追加）
+  const handleGoBack = async () => {
+    // 未保存の画像があれば削除
+    if (featuredImage?.url) {
+      await deleteImage(featuredImage.url);
+    }
+    router.push('/admin/articles');
   };
 
   // エラーメッセージを閉じる
@@ -255,7 +300,7 @@ const CreateArticlePage = () => {
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <button 
-            onClick={() => router.back()} 
+            onClick={handleGoBack} 
             className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
             type="button"
           >
@@ -309,29 +354,29 @@ const CreateArticlePage = () => {
 
         {/* アイキャッチ画像エリア */}
         <div className="relative">
-          {featuredImage ? (
-            <div className="relative w-full h-56 bg-gray-100">
-              <img 
-                src={featuredImage.url} 
-                alt="アイキャッチ画像" 
-                className="w-full h-full object-cover"
-              />
-              <button 
-                onClick={() => setFeaturedImage(null)}
-                className="absolute top-3 right-3 bg-black bg-opacity-60 text-white p-1 rounded-full hover:bg-opacity-80"
-                type="button"
-              >
-                <X size={18} />
-              </button>
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-3 right-3 bg-black bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 flex items-center gap-1"
-                type="button"
-              >
-                <ImageIcon size={16} />
-                <span className="text-xs">変更</span>
-              </button>
-            </div>
+        {featuredImage ? (
+          <div className="relative w-full h-56 bg-gray-100">
+            <img 
+              src={featuredImage.url} 
+              alt="アイキャッチ画像" 
+              className="w-full h-full object-cover"
+            />
+            <button 
+              onClick={handleRemoveImage}
+              className="absolute top-3 right-3 bg-black bg-opacity-60 text-white p-1 rounded-full hover:bg-opacity-80"
+              type="button"
+            >
+              <X size={18} />
+            </button>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-3 right-3 bg-black bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 flex items-center gap-1"
+              type="button"
+            >
+              <ImageIcon size={16} />
+              <span className="text-xs">変更</span>
+            </button>
+          </div>
           ) : (
             <div 
               className="w-full h-32 flex flex-col items-center justify-center bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"

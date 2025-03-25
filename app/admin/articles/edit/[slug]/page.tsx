@@ -15,20 +15,18 @@ import {
 import RichTextEditor from '@/app/component/RichTextEditor';
 import ImageCropper from '@/app/component/ImageCropper';
 
-// 型定義を追加
+// 型定義は以前と同じ
 interface FeaturedImage {
   url: string;
   file: File | null;
 }
 
-// APIのエラーレスポンス型を定義
 interface ApiErrorResponse {
   message?: string;
   error?: string;
   [key: string]: unknown;
 }
 
-// タグの型定義を追加
 interface Tag {
   id: number;
   tag_name: string;
@@ -39,7 +37,6 @@ interface FileUploadResponse {
   image_url: string;
 }
 
-// 記事データの型定義を修正
 interface ArticleData {
   id: number;
   title: string;
@@ -47,7 +44,7 @@ interface ArticleData {
   content: string;
   is_publish: boolean;
   image_url?: string | null;
-  tags?: Tag[] | string[]; // タグがオブジェクトの配列または文字列の配列の両方に対応
+  tags?: Tag[] | string[];
 }
 
 const EditArticlePage = () => {
@@ -70,6 +67,25 @@ const EditArticlePage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // 画像削除処理の追加
+  const deleteImage = async (imageUrl: string) => {
+    try {
+      const response = await fetch('http://localhost:8080/image', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: imageUrl }),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json() as ApiErrorResponse;
+        console.error('画像削除エラー:', errorData);
+      }
+    } catch (error) {
+      console.error('画像削除中にエラーが発生しました:', error);
+    }
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -88,12 +104,19 @@ const EditArticlePage = () => {
     };
 
     checkAuth();
+
+    // コンポーネントのクリーンアップ時に未保存の画像を削除
+    return () => {
+      if (featuredImage?.url) {
+        deleteImage(featuredImage.url);
+      }
+    };
   }, [router]);
 
   // 認証チェックが終わるまで描画を防ぐ
   if (isAuthenticated === null) return null;
 
-  // 記事データの取得
+  // 記事データの取得（以前と同じ）
   useEffect(() => {
     if (!slug || isAuthenticated === false) return;
 
@@ -138,7 +161,7 @@ const EditArticlePage = () => {
   }, [slug, isAuthenticated]);
 
   const handleUpdate = async (publish = false) => {
-    // 入力検証
+    // 入力検証（以前と同じ）
     if (!title.trim()) {
       setErrorMessage('タイトルは必須です');
       return;
@@ -164,7 +187,6 @@ const EditArticlePage = () => {
     setErrorMessage(null);
     
     try {
-      // アイキャッチ画像がある場合は先にアップロード処理を行う想定
       const image_path = featuredImage?.url || null;
       
       const response = await fetch(`http://localhost:8080/article/${slug}`, {
@@ -177,6 +199,7 @@ const EditArticlePage = () => {
           is_publish: publish,
           image_path
         }),
+        credentials: 'include'
       });
       
       // APIからのエラーレスポンスを処理
@@ -188,18 +211,18 @@ const EditArticlePage = () => {
         return;
       }
       
-      // タグ情報の更新 (PATCHメソッドでタグのみを更新)
+      // タグ情報の更新
       const tagResponse = await fetch(`http://localhost:8080/tags/article/${slug}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tags
         }),
+        credentials: 'include'
       });
       
       if (!tagResponse.ok) {
         console.error('タグ更新エラー:', tagResponse.statusText);
-        // タグのエラーは表示せず、記事は更新済みなのでリダイレクト
       }
       
       router.push('/admin/articles');
@@ -233,6 +256,11 @@ const EditArticlePage = () => {
     }
 
     try {
+      // 既存の画像があれば削除
+      if (featuredImage?.url) {
+        await deleteImage(featuredImage.url);
+      }
+
       const formData = new FormData();
       formData.append('file', croppedFile, croppedFile.name);
       
@@ -263,6 +291,23 @@ const EditArticlePage = () => {
       setErrorMessage('画像のアップロード中にエラーが発生しました');
       setCroppingImage(false);
     }
+  };
+
+  // 画像を削除するハンドラ
+  const handleRemoveImage = async () => {
+    if (featuredImage?.url) {
+      await deleteImage(featuredImage.url);
+      setFeaturedImage(null);
+    }
+  };
+
+  // 戻るボタンのハンドラ（画像削除を追加）
+  const handleGoBack = async () => {
+    // 未保存の画像があれば削除
+    if (featuredImage?.url) {
+      await deleteImage(featuredImage.url);
+    }
+    router.push('/admin/articles');
   };
 
   // エラーメッセージを閉じる
@@ -314,7 +359,7 @@ const EditArticlePage = () => {
           </div>
           <button
             className="text-gray-500 hover:text-gray-700 ml-2"
-            onClick={dismissError}
+            onClick={() => setErrorMessage(null)}
             type="button"
           >
             <X size={16} />
@@ -325,7 +370,7 @@ const EditArticlePage = () => {
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <button 
-            onClick={() => router.back()} 
+            onClick={handleGoBack} 
             className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
             type="button"
           >
@@ -369,7 +414,12 @@ const EditArticlePage = () => {
         <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
         
         {croppingImage && imageToEdit && (
-          <ImageCropper imageUrl={imageToEdit} onCancel={() => setCroppingImage(false)} onCrop={handleCropComplete} aspectRatio={16/9} />
+          <ImageCropper 
+            imageUrl={imageToEdit} 
+            onCancel={() => setCroppingImage(false)} 
+            onCrop={handleCropComplete} 
+            aspectRatio={16/9} 
+          />
         )}
 
         {/* アイキャッチ画像エリア */}
@@ -382,7 +432,7 @@ const EditArticlePage = () => {
                 className="w-full h-full object-cover"
               />
               <button 
-                onClick={() => setFeaturedImage(null)}
+                onClick={handleRemoveImage}
                 className="absolute top-3 right-3 bg-black bg-opacity-60 text-white p-1 rounded-full hover:bg-opacity-80"
                 type="button"
               >
