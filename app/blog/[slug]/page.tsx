@@ -10,6 +10,7 @@ interface Article {
   id: number;
   title: string;
   content: string;
+  image_url?: string;
   updated_at: string;
 }
 
@@ -105,6 +106,16 @@ export default function ArticlePage() {
           </div>
         ) : (
           <div className="bg-white shadow-md rounded-lg overflow-hidden p-6 md:p-8">
+            {/* 記事の画像 */}
+            <div className="mb-6">
+              <img 
+                src={article.image_url || "https://storage.kawa0x5f.com/kawa_logo.png"} 
+                alt={article.title} 
+                className="w-full h-auto object-cover rounded-lg"
+              />
+            </div>
+
+            {/* 記事タイトルと本文 */}
             <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
             <p className="text-gray-500 text-sm mb-6">
               更新日: {new Date(article.updated_at).toLocaleDateString('ja-JP')}
@@ -112,6 +123,8 @@ export default function ArticlePage() {
             <div className="prose max-w-none">
               <ReactMarkdown>{article.content}</ReactMarkdown>
             </div>
+
+            {/* 記事一覧への戻るリンク */}
             <div className="mt-8 pt-4 border-t border-gray-100">
               <Link href="/blog" className="text-blue-600 hover:underline flex items-center">
                 <svg 
@@ -137,7 +150,6 @@ export default function ArticlePage() {
 
       {/* フッター */}
       <Footer siteName="Kawa_ Blog" adminName="Kawa_" />
-
     </main>
   );
 }

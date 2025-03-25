@@ -13,6 +13,7 @@ interface Article {
   title: string;
   slug: string;
   content: string;
+  image_url?: string;
   created_at: string;
   updated_at: string;
   tags?: Tag[] | string[];
@@ -96,6 +97,11 @@ export default function Blog() {
             {filteredArticles.map((article) => (
               <Link key={article.slug} href={`/blog/${article.slug}`} className="block">
                 <div className="bg-white shadow-md rounded-lg overflow-hidden p-6 hover:shadow-lg transition duration-300 h-full flex flex-col">
+                <img 
+                  src={article.image_url || "https://storage.kawa0x5f.com/kawa_logo.png"} 
+                  alt={article.title} 
+                  className="w-full h-48 object-cover rounded-md"
+                />
                   <h2 className="text-xl font-semibold line-clamp-2">{article.title}</h2>
                   {article.tags && (
                     <div className="mt-2 flex flex-wrap gap-2">
