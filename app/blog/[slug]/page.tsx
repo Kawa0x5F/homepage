@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
-import Image from 'next/image';
 import Footer from "@/app/component/Footer";
 
 interface Article {
@@ -33,7 +32,7 @@ export default function ArticlePage() {
   return (
     <main className="flex flex-col items-center min-h-screen bg-gray-50">
       {/* ヘッダー */}
-      <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
+      <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 py-2">
         <div className="max-w-5xl mx-auto flex items-center justify-between px-4">
           <Link href="/blog" className="flex items-center">
             <h1 className="text-2xl font-bold text-gray-800">Kawa Blog</h1>

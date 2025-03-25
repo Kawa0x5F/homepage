@@ -58,7 +58,7 @@ export default function Blog() {
 
   return (
     <main className="flex flex-col items-center min-h-screen bg-gray-50">
-      <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
+      <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 py-2">
         <div className="max-w-5xl mx-auto flex items-center justify-between px-4">
           <Link href="/blog" className="flex items-center">
             <h1 className="text-2xl font-bold text-gray-800">Kawa_ Blog</h1>
