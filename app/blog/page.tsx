@@ -98,7 +98,7 @@ export default function Blog() {
               <Link key={article.slug} href={`/blog/${article.slug}`} className="block">
                 <div className="bg-white shadow-md rounded-lg overflow-hidden p-4 hover:shadow-lg transition duration-300 h-full flex flex-col">
                 <img 
-                  src={article.image_url || "https://storage.kawa0x5f.com/kawa_logo.png"} 
+                  src={article.image_url || "https://storage.kawa0x5f.com/kawa_logo.jpg"} 
                   alt={article.title} 
                   className="w-full  object-cover"
                 />
