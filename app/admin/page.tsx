@@ -35,8 +35,8 @@ const AdminPage = () => {
           <div className="absolute left-4">
             <a href="/">
               <img 
-                src="/images/kawa_logo.png" 
-                alt="Kawa Logo" 
+                src="/images/kawa_logo.svg" 
+                alt="Kawa_ Logo" 
                 className="h-10 w-auto cursor-pointer" 
               />
             </a>
