@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { FC, useState, useEffect, useRef } from 'react';
+import { FC, useState, useRef } from 'react';
 import { 
   Bold, 
   Italic, 
@@ -56,20 +56,38 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
   content, 
   initialContent = '', 
   setContent, 
-  isMarkdown = true 
+  isMarkdown = true,
 }) => {
-  // コンテンツの追跡用の内部ステート
   const [editorContent, setEditorContent] = useState(content || initialContent);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // Initialize isEmpty based on the initial content
   const [isEmpty, setIsEmpty] = useState(!editorContent || editorContent === '<p></p>');
   const [isFocused, setIsFocused] = useState(false);
   const [markdownContent, setMarkdownContent] = useState('');
   const editorContainerRef = useRef<HTMLDivElement>(null);
 
+  const customImageUploadButton = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (event) => {
+      const target = event.target as HTMLInputElement;
+      if (!target.files || target.files.length === 0) return;
+      
+      const file = target.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (editor && e.target?.result) {
+          editor.chain().focus().setImage({ src: e.target.result as string }).run();
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({}),
       Link.configure({
         openOnClick: false,
         linkOnPaste: true,
@@ -88,16 +106,14 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
     content: editorContent,
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
-      // Convert to markdown if needed
+      
       if (isMarkdown) {
         try {
           const markdown = editor.storage.markdown.getMarkdown();
-          console.log("Generated Markdown:", markdown);
           setMarkdownContent(markdown);
           setContent(markdown);
         } catch (err) {
-          console.error("Markdown conversion error:", err);
-          // エラー発生時はHTMLを使用
+          console.error("Markdown変換エラー:", err);
           setContent(html);
         }
       } else {
@@ -113,51 +129,6 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
     },
   });
 
-  // contentまたはinitialContentが変更されたときにエディタを更新
-  useEffect(() => {
-    console.log('Content props changed:', { content, initialContent });
-    const newContent = content || initialContent;
-    setEditorContent(newContent);
-    
-    // Update isEmpty state based on the new content
-    setIsEmpty(!newContent || newContent === '<p></p>');
-    
-    if (editor && newContent) {
-      console.log('Updating editor content to:', newContent);
-      editor.commands.setContent(newContent);
-      // Also ensure isEmpty state is updated after editor content is set
-      setIsEmpty(editor.isEmpty);
-    }
-  }, [editor, content, initialContent]);
-
-  // Make sure isEmpty is properly updated after editor is initialized with content
-  useEffect(() => {
-    if (editor) {
-      setIsEmpty(editor.isEmpty);
-    }
-  }, [editor]);
-
-  useEffect(() => {
-    // フルスクリーンモードの設定
-    if (isFullscreen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isFullscreen]);
-
-  const handleContainerClick = (e: React.MouseEvent) => {
-    if (editor && !isFocused) {
-      // コンテナがクリックされたが、エディタにフォーカスがない場合
-      // エディタにフォーカスを設定する
-      editor.commands.focus();
-    }
-  };
-
   if (!editor) return null;
 
   const toggleFullscreen = () => {
@@ -167,10 +138,8 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
   const downloadMarkdown = () => {
     if (!markdownContent && !editor) return;
     
-    // Use editor's markdown if markdownContent is empty
     const markdown = markdownContent || editor.storage.markdown.getMarkdown();
     
-    // Create blob and download
     const blob = new Blob([markdown], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -401,14 +370,11 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
                 
                 const file = target.files[0];
                 const reader = new FileReader();
-                
-                reader.onload = () => {
-                  const result = reader.result;
-                  if (typeof result === 'string') {
-                    editor.chain().focus().setImage({ src: result }).run();
+                reader.onload = (e) => {
+                  if (e.target?.result) {
+                    editor.chain().focus().setImage({ src: e.target.result as string }).run();
                   }
                 };
-                
                 reader.readAsDataURL(file);
               };
               input.click();
@@ -455,23 +421,13 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
       </div>
 
       {/* エディタ本体 */}
-      <div 
-        ref={editorContainerRef}
-        onClick={handleContainerClick}
-        className={`
-          editor-container relative
-          transition-all duration-200
-          hover:bg-gray-50/20
-        `}
-      >
-
-      {/* Only show placeholder if isEmpty is true AND not focused */}
-      {isEmpty && !isFocused && (
-        <div className="placeholder-message">
-          <p className="text-lg font-medium">記事を書いてみましょう</p>
-          <p className="text-sm mt-2">クリックして入力を開始してください</p>
-        </div>
-      )}
+      <div className={`editor-container relative transition-all duration-200 hover:bg-gray-50/20`}>
+        {isEmpty && !isFocused && (
+          <div className="placeholder-message">
+            <p className="text-lg font-medium">記事を書いてみましょう</p>
+            <p className="text-sm mt-2">クリックして入力を開始してください</p>
+          </div>
+        )}
         
         <EditorContent 
           editor={editor} 
