@@ -10,7 +10,20 @@ export const metadata: Metadata = {
 
 export default function About() {
   return (
-    <main className="flex flex-col items-center justify-center p-4">
+    <main className="flex flex-col items-center min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 py-2">
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-4">
+          <Link href="/blog" className="flex items-center">
+            <h1 className="text-2xl font-bold text-gray-800">Kawa About</h1>
+          </Link>
+          <div className="flex space-x-2">
+            <Link href="/" className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition">TOP</Link>
+            <Link href="/blog" className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition">BLOG</Link>
+            <Link href="/products" className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition">PRODUCT</Link>
+          </div>
+        </div>
+      </div>
       <div className="w-full max-w-3xl bg-orange-50 rounded-lg p-6 shadow-md">
         <h1 className="text-xl font-bold text-gray-800">About me</h1>
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mt-4">
