@@ -43,6 +43,7 @@ const CreateArticlePage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState<string>('');
+  const [editorImagePaths, setEditorImagePaths] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -85,11 +86,14 @@ const CreateArticlePage = () => {
 
     // コンポーネントのクリーンアップ時に未保存の画像を削除
     return () => {
+      // 未保存の画像を削除
+      editorImagePaths.forEach(deleteImage);
+
       if (featuredImage?.url) {
         deleteImage(featuredImage.url);
       }
     };
-  }, [router, featuredImage]);
+  }, [router, featuredImage, editorImagePaths]);
 
   if (!isAuthenticated) return null;
 
@@ -452,7 +456,9 @@ const CreateArticlePage = () => {
           <div className="prose prose-lg max-w-none">
             <RichTextEditor 
               content={content} 
-              setContent={setContent} 
+              setContent={setContent}
+              imagePaths={editorImagePaths}
+              setImagePaths={setEditorImagePaths}
             />
           </div>
         </div>
