@@ -31,8 +31,8 @@ export default function Blog() {
       fetch('http://localhost:8080/tags/all').then((res) => res.json())
     ])
     .then(([articlesData, tagsData]) => {
-      // Ensure tags is an array, default to empty array if null
-      const safeTags = tagsData || [];
+      // Ensure tags is an array of Tag type, default to empty array if null or not an array
+      const safeTags: Tag[] = Array.isArray(tagsData) ? tagsData : [];
       
       // Sort articles and ensure tags are processed safely
       const processedArticles = (articlesData as Article[]).map(article => ({
