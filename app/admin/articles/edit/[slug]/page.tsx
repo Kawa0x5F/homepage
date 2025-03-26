@@ -68,6 +68,7 @@ const EditArticlePage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [imageRemoved, setImageRemoved] = useState(false);
+  const [editorImagePaths, setEditorImagePaths] = useState<string[]>([]);
 
   // 画像削除処理の追加
   const deleteImage = async (imageUrl: string) => {
@@ -115,6 +116,9 @@ const EditArticlePage = () => {
 
     // コンポーネントのクリーンアップ時に未保存の画像を削除
     return () => {
+      // 未保存の画像を削除
+      editorImagePaths.forEach(deleteImage);
+
       if (featuredImage?.url) {
         deleteImage(featuredImage.url);
       }
@@ -559,7 +563,9 @@ const EditArticlePage = () => {
           <div className="prose prose-lg max-w-none">
             <RichTextEditor 
               content={content} 
-              setContent={setContent} 
+              setContent={setContent}
+              imagePaths={editorImagePaths}
+              setImagePaths={setEditorImagePaths}
             />
           </div>
         </div>

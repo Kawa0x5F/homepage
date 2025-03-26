@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { FC, useState, useRef } from 'react';
+import { FC, useState, useRef, useEffect } from 'react';
 import { 
   Bold, 
   Italic, 
@@ -25,11 +25,18 @@ import {
 } from 'lucide-react';
 import { Markdown } from 'tiptap-markdown';
 
+// 画像アップロードレスポンスの型を定義
+interface ImageUploadResponse {
+  image_url: string;
+}
+
 interface RichTextEditorProps {
   content?: string;
   initialContent?: string;
   setContent: (content: string) => void;
   isMarkdown?: boolean;
+  imagePaths?: string[];
+  setImagePaths?: (paths: string[]) => void;
 }
 
 interface ToolbarButtonProps {
@@ -57,6 +64,8 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
   initialContent = '', 
   setContent, 
   isMarkdown = true,
+  imagePaths = [],
+  setImagePaths,
 }) => {
   const [editorContent, setEditorContent] = useState(content || initialContent);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -64,8 +73,69 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const [markdownContent, setMarkdownContent] = useState('');
   const editorContainerRef = useRef<HTMLDivElement>(null);
+  const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
 
-  const customImageUploadButton = () => {
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('http://localhost:8080/image', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Image upload failed');
+      }
+      const result = await response.json() as ImageUploadResponse;
+      const uploadedUrl = result.image_url;
+      console.log('Uploaded Image URL:', uploadedUrl);
+      // 画像パスを更新
+      const newUploadedUrls = [...uploadedImageUrls, uploadedUrl];
+      setUploadedImageUrls(newUploadedUrls);
+      
+      // コンポーネント呼び出し元に画像パスを通知
+      if (setImagePaths) {
+        setImagePaths([...imagePaths, uploadedUrl]);
+      }
+
+      return uploadedUrl;
+    } catch (error) {
+      console.error('Image upload error:', error);
+      return null;
+    }
+  };
+
+  const deleteImage = async (imageUrl: string) => {
+    try {
+      const response = await fetch('http://localhost:8080/image', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ image_url: imageUrl })
+      });
+
+      if (!response.ok) {
+        throw new Error('Image deletion failed');
+      }
+
+      // 画像パスを更新
+      const newUploadedUrls = uploadedImageUrls.filter(url => url !== imageUrl);
+      setUploadedImageUrls(newUploadedUrls);
+      
+      // コンポーネント呼び出し元に画像パスを通知
+      if (setImagePaths) {
+        const newImagePaths = imagePaths.filter(path => path !== imageUrl);
+        setImagePaths(newImagePaths);
+      }
+    } catch (error) {
+      console.error('Image deletion error:', error);
+    }
+  };
+
+  const customImageUploadButton = async () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -74,27 +144,43 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
       if (!target.files || target.files.length === 0) return;
       
       const file = target.files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (editor && e.target?.result) {
-          editor.chain().focus().setImage({ src: e.target.result as string }).run();
-        }
-      };
-      reader.readAsDataURL(file);
+      const uploadedUrl = await uploadImage(file);
+      
+      if (uploadedUrl && editor) {
+        // 画像を実際にエディタに挿入
+        editor.chain()
+          .focus()
+          .setImage({ 
+            src: uploadedUrl,
+            alt: file.name 
+          })
+          .run();
+      }
     };
     input.click();
   };
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({}),
+      StarterKit.configure({
+        // デフォルトの挙動を明示的に設定
+        paragraph: {
+          // クリック可能範囲を拡大
+          HTMLAttributes: {
+            class: 'min-h-[2em] w-full',
+          },
+        },
+      }),
       Link.configure({
         openOnClick: false,
         linkOnPaste: true,
       }),
       Image.configure({
-        inline: true,
+        inline: false, // ブロックレベルの画像にする
         allowBase64: true,
+        HTMLAttributes: {
+          class: 'w-full max-w-full object-contain', // 画像のレスポンシブ対応
+        },
       }),
       Markdown.configure({
         html: false,
@@ -104,6 +190,12 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
       }),
     ],
     content: editorContent,
+    editorProps: {
+      attributes: {
+        // エディタ全体のクリック可能範囲を拡大
+        class: 'min-h-[400px] w-full p-4 focus:outline-none cursor-text',
+      },
+    },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       
@@ -129,6 +221,27 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
     },
   });
 
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        const { selection } = editor.state;
+        const node = selection.$head.parent;
+        
+        if (node.type.name === 'image') {
+          const imageUrl = node.attrs.src;
+          deleteImage(imageUrl);
+        }
+      }
+    };
+
+    editor.view.dom.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      editor.view.dom.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [editor, deleteImage]);
   if (!editor) return null;
 
   const toggleFullscreen = () => {
@@ -152,11 +265,16 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
   // エディタスタイルのカスタム定義
   const customStyles = `
     .ProseMirror {
-      outline: none;
-      min-height: 100%;
-      height: 100%;
+      min-height: 400px;
+      width: 100%;
+      padding: 1rem;
+      cursor: text;
     }
     
+    .ProseMirror:focus {
+      outline: none;
+    }
+
     .editor-container {
       position: relative;
       transition: all 0.2s ease;
@@ -254,7 +372,42 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
       margin-bottom: 0.5em;
       font-weight: 600;
     }
-  `;
+
+    .ProseMirror img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 1rem auto;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .ProseMirror img::after {
+      content: '✕';
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(255,0,0,0.7);
+      color: white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .ProseMirror img:hover::after {
+      display: flex;
+    }
+
+    .ProseMirror p {
+      min-height: 1.5em;
+      margin: 0;
+      padding: 0.25rem 0;
+    }
+    `;
 
   return (
     <div 
@@ -360,26 +513,8 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
           </ToolbarButton>
 
           <ToolbarButton
-            action={() => {
-              const input = document.createElement('input');
-              input.type = 'file';
-              input.accept = 'image/*';
-              input.onchange = async (event) => {
-                const target = event.target as HTMLInputElement;
-                if (!target.files || target.files.length === 0) return;
-                
-                const file = target.files[0];
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                  if (e.target?.result) {
-                    editor.chain().focus().setImage({ src: e.target.result as string }).run();
-                  }
-                };
-                reader.readAsDataURL(file);
-              };
-              input.click();
-            }}
-            title="画像"
+          action={customImageUploadButton}
+          title="画像"
           >
             <ImageIcon size={16} />
           </ToolbarButton>
@@ -421,7 +556,7 @@ const ModernRichTextEditor: FC<RichTextEditorProps> = ({
       </div>
 
       {/* エディタ本体 */}
-      <div className={`editor-container relative transition-all duration-200 hover:bg-gray-50/20`}>
+      <div className="editor-container relative transition-all duration-200 hover:bg-gray-50/20">
         {isEmpty && !isFocused && (
           <div className="placeholder-message">
             <p className="text-lg font-medium">記事を書いてみましょう</p>
