@@ -4,7 +4,7 @@ import Image from 'next/image'
 import './../ui/globals.css'
 
 export const metadata: Metadata = {
-  title: 'Kawa_Web',
+  title: 'Kawa_About',
   description: 'Kawa_のホームページです.',
 }
 
