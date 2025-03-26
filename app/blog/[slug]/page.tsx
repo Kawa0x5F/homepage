@@ -108,7 +108,7 @@ export default function ArticlePage() {
             {/* 記事の画像 */}
             <div className="mb-6">
               <img 
-                src={article.image_url || "https://storage.kawa0x5f.com/kawa_logo.jpg"} 
+                src={article.image_url || "/images/kawa_logo.jpg"} 
                 alt={article.title} 
                 className="w-full h-auto object-cover rounded-lg"
               />
