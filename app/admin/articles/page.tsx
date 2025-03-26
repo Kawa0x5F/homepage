@@ -11,6 +11,7 @@ type Article = {
   content: string;
   is_publish: boolean;
   created_at: string;
+  image_url?: string;
 };
 
 const AdminArticlePage = () => {
@@ -20,7 +21,6 @@ const AdminArticlePage = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -29,7 +29,7 @@ const AdminArticlePage = () => {
           setIsAuthenticated(true);
         } else {
           setIsAuthenticated(false);
-          router.push('/login'); // 未認証ならログインページへリダイレクト
+          router.push('/login');
         }
       } catch (error) {
         console.error('認証チェックエラー:', error);
@@ -53,7 +53,6 @@ const AdminArticlePage = () => {
       const res = await fetch('http://localhost:8080/articles/all', { credentials: 'include' });
       const data = await res.json();
       if (Array.isArray(data)) {
-        // 作成日順に並び替え（新しい記事が上に表示）
         const sortedArticles = [...data].sort((a, b) => {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
@@ -78,7 +77,36 @@ const AdminArticlePage = () => {
 
   const handleDelete = async (slug: string) => {
     try {
-      await fetch(`http://localhost:8080/article/${slug}`, { method: 'DELETE', credentials: 'include' });
+      const articleData = articles.find(article => article.slug === slug);
+      if (!articleData) {
+        throw new Error('対象の記事が見つかりません');
+      }
+
+      const deleteArticleRes = await fetch(`http://localhost:8080/article/${slug}`, { 
+        method: 'DELETE', 
+        credentials: 'include' 
+      });
+
+      if (!deleteArticleRes.ok) {
+        throw new Error('記事の削除に失敗しました');
+      }
+
+      if (articleData.image_url) {
+        console.log('Attempting to delete image:', articleData.image_url);
+        const deleteImageRes = await fetch('http://localhost:8080/image', {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ image_url: articleData.image_url })
+        });
+
+        if (!deleteImageRes.ok) {
+          throw new Error('画像の削除に失敗しました');
+        }
+      }
+
       setDeleteConfirmId(null);
       fetchArticles();
     } catch (error) {

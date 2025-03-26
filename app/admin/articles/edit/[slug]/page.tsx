@@ -59,6 +59,7 @@ const EditArticlePage = () => {
   const [isSubmittingDraft, setIsSubmittingDraft] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [featuredImage, setFeaturedImage] = useState<FeaturedImage | null>(null);
+  const [originalFeaturedImage, setOriginalFeaturedImage] = useState<string | null>(null);
   const [croppingImage, setCroppingImage] = useState<boolean>(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -66,10 +67,14 @@ const EditArticlePage = () => {
   const [tagInput, setTagInput] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [imageRemoved, setImageRemoved] = useState(false);
 
   // 画像削除処理の追加
   const deleteImage = async (imageUrl: string) => {
     try {
+      // URLが空や未定義の場合は処理しない
+      if (!imageUrl) return;
+
       const response = await fetch('http://localhost:8080/image', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -80,9 +85,12 @@ const EditArticlePage = () => {
       if (!response.ok) {
         const errorData = await response.json() as ApiErrorResponse;
         console.error('画像削除エラー:', errorData);
+        // エラー時の追加のエラーハンドリング
+        setErrorMessage(`画像削除に失敗しました: ${errorData.message || '不明なエラー'}`);
       }
     } catch (error) {
       console.error('画像削除中にエラーが発生しました:', error);
+      setErrorMessage('画像削除中にネットワークエラーが発生しました');
     }
   };
 
@@ -116,7 +124,7 @@ const EditArticlePage = () => {
   // 認証チェックが終わるまで描画を防ぐ
   if (isAuthenticated === null) return null;
 
-  // 記事データの取得（以前と同じ）
+  // 記事データの取得
   useEffect(() => {
     if (!slug || isAuthenticated === false) return;
 
@@ -138,6 +146,7 @@ const EditArticlePage = () => {
             url: article.image_url,
             file: null
           });
+          setOriginalFeaturedImage(article.image_url);
         }
 
         // タグ情報の処理を修正
@@ -161,7 +170,7 @@ const EditArticlePage = () => {
   }, [slug, isAuthenticated]);
 
   const handleUpdate = async (publish = false) => {
-    // 入力検証（以前と同じ）
+    // 入力検証
     if (!title.trim()) {
       setErrorMessage('タイトルは必須です');
       return;
@@ -187,7 +196,10 @@ const EditArticlePage = () => {
     setErrorMessage(null);
     
     try {
-      const image_path = featuredImage?.url || null;
+      // 画像パスの処理を修正
+      const image_url = imageRemoved 
+        ? '' 
+        : (featuredImage?.url || originalFeaturedImage || '');
       
       const response = await fetch(`http://localhost:8080/article/${slug}`, {
         method: 'PATCH',
@@ -197,7 +209,7 @@ const EditArticlePage = () => {
           slug,
           content,
           is_publish: publish,
-          image_path
+          image_url
         }),
         credentials: 'include'
       });
@@ -254,13 +266,13 @@ const EditArticlePage = () => {
       setCroppingImage(false);
       return;
     }
-
+  
     try {
-      // 既存の画像があれば削除
-      if (featuredImage?.url) {
+      // 既存の画像があれば削除（元の画像と現在の画像が異なる場合）
+      if (featuredImage?.url && featuredImage.url !== originalFeaturedImage) {
         await deleteImage(featuredImage.url);
       }
-
+  
       const formData = new FormData();
       formData.append('file', croppedFile, croppedFile.name);
       
@@ -285,6 +297,9 @@ const EditArticlePage = () => {
         file: croppedFile
       });
       
+      // 画像削除フラグをリセット
+      setImageRemoved(false);
+      
       setCroppingImage(false);
     } catch (error) {
       console.error('画像アップロードエラー:', error);
@@ -295,19 +310,41 @@ const EditArticlePage = () => {
 
   // 画像を削除するハンドラ
   const handleRemoveImage = async () => {
-    if (featuredImage?.url) {
-      await deleteImage(featuredImage.url);
-      setFeaturedImage(null);
+    try {
+      // 現在の画像URLを特定
+      const imageToDelete = featuredImage?.url || originalFeaturedImage;
+      
+      if (imageToDelete) {
+        // 画像を削除
+        await deleteImage(imageToDelete);
+        
+        // 状態をリセット
+        setFeaturedImage(null);
+        setOriginalFeaturedImage(null);
+        setImageRemoved(true);
+      }
+    } catch (error) {
+      console.error('画像削除エラー:', error);
+      setErrorMessage('画像の削除中にエラーが発生しました');
     }
   };
 
-  // 戻るボタンのハンドラ（画像削除を追加）
+  // 戻るボタンのハンドラ
   const handleGoBack = async () => {
-    // 未保存の画像があれば削除
-    if (featuredImage?.url) {
-      await deleteImage(featuredImage.url);
+    try {
+      // 新規アップロードされた画像で、元の画像と異なる場合のみ削除
+      if (
+        featuredImage?.url && 
+        featuredImage.url !== originalFeaturedImage
+      ) {
+        await deleteImage(featuredImage.url);
+      }
+      
+      router.push('/admin/articles');
+    } catch (error) {
+      console.error('戻る処理中のエラー:', error);
+      setErrorMessage('ページ遷移中にエラーが発生しました');
     }
-    router.push('/admin/articles');
   };
 
   // エラーメッセージを閉じる
