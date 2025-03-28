@@ -36,15 +36,31 @@ export default function About() {
 
   const [profile, setProfile] = useState<About | null>(null);
 
+  function isAbout(data: any): data is About {
+    return data && typeof data.id === 'number' && typeof data.name === 'string';
+  }
+
   useEffect(() => {
-    fetch(`http://localhost:8080/about/${id}`)
-      .then((res) => res.json())
-      .then((data: unknown) => {
-        if (typeof data === 'object' && data !== null && 'id' in data) {
-          setProfile(data as About);
+    // 最初に指定された id を使ってデータをフェッチ
+    const fetchProfile = async (profileId: number) => {
+      try {
+        const res = await fetch(`http://localhost:8080/about/${profileId}`);
+        const data = await res.json();
+        
+        if (isAbout(data)) {
+          setProfile(data);
+        } else {
+          // データが無ければ id=1 のデータを再度フェッチ
+          const fallbackRes = await fetch('http://localhost:8080/about/1');
+          const fallbackData = await fallbackRes.json();
+          setProfile(fallbackData as About);
         }
-      })
-      .catch((error) => console.error('Error fetching profile:', error));
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    fetchProfile(id);
   }, [id]);
 
   if (!profile) {

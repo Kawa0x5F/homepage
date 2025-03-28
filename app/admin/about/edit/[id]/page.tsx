@@ -44,6 +44,27 @@ export default function EditAbout({ params }: Props) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/auth/check', { credentials: 'include' });
+        if (res.ok) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('認証チェックエラー:', error);
+        setIsAuthenticated(false);
+        router.push('/login');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   useEffect(() => {
     async function fetchData() {

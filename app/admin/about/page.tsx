@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Footer from '@/app/component/Footer';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Briefcase, MessageCircle } from 'lucide-react';
 import '@/app/ui/globals.css'
 
 type About = {
@@ -104,11 +104,28 @@ const AdminAboutPage = () => {
             <h1 className="text-xl font-semibold text-gray-900 absolute left-1/2 transform -translate-x-1/2">
               プロフィール管理ダッシュボード
             </h1>
-
           </div>
         </div>
       </header>
+      
       <main className="flex-grow max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full">
+        <div className="mb-4 flex justify-end space-x-2">
+          <button
+            onClick={() => router.push('/admin/edit/skills')}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            <Briefcase size={16} className="mr-2" />
+            スキル管理
+          </button>
+          <button
+            onClick={() => router.push('/admin/edit/contact')}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <MessageCircle size={16} className="mr-2" />
+            コンタクト管理
+          </button>
+        </div>
+
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
             <h2 className="text-lg leading-6 font-medium text-gray-900">プロフィール一覧</h2>
