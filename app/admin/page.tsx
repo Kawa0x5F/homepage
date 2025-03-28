@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Footer from '@/app/component/Footer';
+import '@/app/ui/globals.css'
 
 const AdminPage = () => {
   const router = useRouter();

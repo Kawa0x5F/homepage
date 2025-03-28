@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, AlertCircle } from "lucide-react";
 import Footer from '@/app/component/Footer';
+import '@/app/ui/globals.css'
 
 // AtCoderの色に対応するクラスマップ
 const atcoderColorClasses: { [key: string]: string } = {

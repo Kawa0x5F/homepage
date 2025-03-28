@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation'
 import Footer from '@/app/component/Footer';
+import '@/app/ui/globals.css'
 
 type About = {
   id: number;
@@ -88,7 +89,8 @@ export default function About() {
             alt={`${profile.name}のプロフィール画像`}
             width={240}
             height={240}
-            className={`rounded-xl shadow-2xl object-cover border-4 ${colorClass}`}
+            className={`rounded-xl shadow-2xl object-cover`}
+            priority
           />
           <div>
             <div className="mb-6">

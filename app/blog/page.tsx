@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Footer from '@/app/component/Footer';
+import '@/app/ui/globals.css'
 
 interface Tag {
   id: number;

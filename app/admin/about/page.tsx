@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Footer from '@/app/component/Footer';
 import { ArrowLeft } from 'lucide-react';
+import '@/app/ui/globals.css'
 
 type About = {
   id: number;

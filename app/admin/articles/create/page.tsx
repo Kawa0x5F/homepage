@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import RichTextEditor from '@/app/component/RichTextEditor';
 import ImageCropper from '@/app/component/ImageCropper';
+import '@/app/ui/globals.css'
 
 // 型定義
 interface FeaturedImage {
