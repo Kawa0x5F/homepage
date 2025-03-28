@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation'
 import Footer from '@/app/component/Footer';
 
 type About = {
@@ -28,7 +29,10 @@ const atcoderColorClasses: { [key: string]: string } = {
   red: 'text-red-500 border-red-400', // 赤
 };
 
-export default function About({ id = 1 }: { id?: number }) {
+export default function About() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id') ? Number(searchParams.get('id')) : 1;
+
   const [profile, setProfile] = useState<About | null>(null);
 
   useEffect(() => {
