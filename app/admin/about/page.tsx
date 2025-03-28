@@ -52,9 +52,7 @@ const AdminAboutPage = () => {
       const res = await fetch('http://localhost:8080/about/all', { credentials: 'include' });
       const data = await res.json();
       if (Array.isArray(data)) {
-        const sortedAbouts = [...data].sort((a, b) => {
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
+        const sortedAbouts = [...data].sort((a, b) => a.id - b.id);
         setAbouts(sortedAbouts as About[]);
       } else {
         console.error('Invalid data format:', data);

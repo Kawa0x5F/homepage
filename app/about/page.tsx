@@ -10,8 +10,22 @@ type About = {
   roma: string;
   description: string;
   image_url?: string;
+  color?: string;
   created_at: string;
   updated_at: string;
+};
+
+// AtCoderの色に対応するクラスマップ
+const atcoderColorClasses: { [key: string]: string } = {
+  black: 'text-gray-900 border-black', // 黒
+  gray: 'text-gray-500 border-gray-400', // 灰
+  brown: 'text-yellow-700 border-yellow-600', // 茶
+  green: 'text-green-500 border-green-400', // 緑
+  cyan: 'text-cyan-500 border-cyan-400', // 水色
+  blue: 'text-blue-500 border-blue-400', // 青
+  yellow: 'text-yellow-500 border-yellow-400', // 黄
+  orange: 'text-orange-500 border-orange-400', // 橙
+  red: 'text-red-500 border-red-400', // 赤
 };
 
 export default function About({ id = 1 }: { id?: number }) {
@@ -36,11 +50,15 @@ export default function About({ id = 1 }: { id?: number }) {
     );
   }
 
+  // 画像のURL
   const imageUrl = profile.image_url && profile.image_url.startsWith('http')
     ? profile.image_url
     : profile.image_url
     ? `/${profile.image_url}`
     : '/images/portfolio_photo.jpg';
+
+  // AtCoderの色を取得（デフォルト: gray）
+  const colorClass = profile.color && atcoderColorClasses[profile.color] ? atcoderColorClasses[profile.color] : atcoderColorClasses.gray;
 
   return (
     <main className="flex flex-col items-center min-h-screen bg-gray-50">
@@ -58,23 +76,23 @@ export default function About({ id = 1 }: { id?: number }) {
         </div>
       </div>
 
-      {/* Profile Section - Enhanced */}
+      {/* Profile Section */}
       <div className="container mx-auto px-4 pt-24 pb-12 relative">
         <div className="max-w-4xl mx-auto grid md:grid-cols-[auto_1fr] gap-12 items-center">
           <Image 
             src={imageUrl}
             alt={`${profile.name}のプロフィール画像`}
-            width={240}  // Increased from 160
-            height={240} // Increased from 160
-            className="rounded-xl shadow-2xl object-cover border-4 border-emerald-400"
+            width={240}
+            height={240}
+            className={`rounded-xl shadow-2xl object-cover border-4 ${colorClass}`}
           />
           <div>
             <div className="mb-6">
-              <h2 className="text-5xl font-bold text-emerald-500 mb-2">{profile.name}</h2>
+              <h2 className={`text-5xl font-bold ${colorClass} mb-2`}>{profile.name}</h2>
               <p className="text-neutral-600 text-lg tracking-wider">{profile.roma}</p>
             </div>
-            <div className="h-1.5 w-24 bg-emerald-400 mb-6"></div>
-            <p className="text-neutral-700 text-xl leading-relaxed">
+            <div className={`h-1.5 w-24 ${colorClass} mb-6`}></div>
+            <p className="text-neutral-700 text-xl leading-relaxed whitespace-pre-line">
               {profile.description}
             </p>
           </div>
