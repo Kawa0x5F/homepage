@@ -190,16 +190,11 @@ export default function About() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                 {typeSkills.map(skill => (
                   <div key={skill.id} className="flex flex-col items-center">
-                    <div className="w-16 h-16 flex items-center justify-center mb-2">
-                      <Image
-                        src={skill.has_image ? `/image/${skill.name}.jpg` : '/image/noImage.jpg'}
-                        alt={skill.name}
-                        width={64}
-                        height={64}
-                        className="object-contain"
-                      />
-                    </div>
-                    <p className="text-center text-gray-700">{skill.name}</p>
+                    <p 
+                     className="px-4 py-2 bg-blue-500 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-blue-600 transition-all"
+                    >
+                      {skill.name}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -223,7 +218,7 @@ export default function About() {
               >
                 <div className="w-12 h-12 flex items-center justify-center mb-2">
                   <Image
-                    src={contact.has_image ? `/image/${contact.name}.jpg` : '/image/noImage.jpg'}
+                    src={contact.has_image ? `/images/${contact.name}.svg` : '/images/noImage.svg'}
                     alt={contact.name}
                     width={48}
                     height={48}
