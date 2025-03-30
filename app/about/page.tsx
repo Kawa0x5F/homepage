@@ -17,6 +17,24 @@ type About = {
   updated_at: string;
 };
 
+type SkillType = "Language" | "FrameWorks" | "Tools";
+
+type Skill = {
+  id: number;
+  name: string;
+  type: SkillType;
+  has_image: boolean;
+  created_at: string;
+};
+
+type Contact = {
+  id: number;
+  name: string;
+  link: string;
+  has_image: boolean;
+  created_at: string;
+};
+
 // AtCoderの色に対応するクラスマップ
 const atcoderColorClasses: { [key: string]: string } = {
   black: 'text-gray-900 border-black', // 黒
@@ -35,6 +53,9 @@ export default function About() {
   const id = searchParams.get('id') ? Number(searchParams.get('id')) : 1;
 
   const [profile, setProfile] = useState<About | null>(null);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
 
   function isAbout(data: any): data is About {
     return data && typeof data.id === 'number' && typeof data.name === 'string';
@@ -60,10 +81,40 @@ export default function About() {
       }
     };
 
-    fetchProfile(id);
+    const fetchSkills = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/skills/all');
+        const data = await res.json();
+        setSkills((data ?? []) as Skill[]);
+      } catch (error) {
+        console.error('Error fetching skills:', error);
+      }
+    };
+    
+    const fetchContacts = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/contact/all');
+        const data = await res.json();
+        setContacts((data ?? []) as Contact[]);
+      } catch (error) {
+        console.error('Error fetching contacts:', error);
+      }
+    };
+
+    const fetchData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchProfile(id),
+        fetchSkills(),
+        fetchContacts()
+      ]);
+      setLoading(false);
+    };
+
+    fetchData();
   }, [id]);
 
-  if (!profile) {
+  if (loading || !profile) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
         <p className="text-xl text-gray-600">Loading...</p>
@@ -80,6 +131,13 @@ export default function About() {
 
   // AtCoderの色を取得（デフォルト: gray）
   const colorClass = profile.color && atcoderColorClasses[profile.color] ? atcoderColorClasses[profile.color] : atcoderColorClasses.gray;
+
+  // スキルをタイプ別にグループ化
+  const groupedSkills: Record<SkillType, Skill[]> = {
+    "Language": skills.filter(skill => skill.type === "Language"),
+    "FrameWorks": skills.filter(skill => skill.type === "FrameWorks"),
+    "Tools": skills.filter(skill => skill.type === "Tools")
+  };
 
   return (
     <main className="flex flex-col items-center min-h-screen bg-gray-50">
@@ -117,6 +175,64 @@ export default function About() {
             <p className="text-neutral-700 text-xl leading-relaxed whitespace-pre-line">
               {profile.description}
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Skills Section */}
+      <div className="container mx-auto px-4 py-16 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">Skills</h2>
+          
+          {Object.entries(groupedSkills).map(([type, typeSkills]) => (
+            <div key={type} className="mb-12">
+              <h3 className="text-2xl font-semibold text-gray-700 mb-6">{type}</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {typeSkills.map(skill => (
+                  <div key={skill.id} className="flex flex-col items-center">
+                    <div className="w-16 h-16 flex items-center justify-center mb-2">
+                      <Image
+                        src={skill.has_image ? `/image/${skill.name}.jpg` : '/image/noImage.jpg'}
+                        alt={skill.name}
+                        width={64}
+                        height={64}
+                        className="object-contain"
+                      />
+                    </div>
+                    <p className="text-center text-gray-700">{skill.name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Contact Section */}
+      <div className="container mx-auto px-4 py-16 bg-gray-50">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">Contact</h2>
+          <div className="flex flex-wrap justify-center gap-8">
+            {contacts.map(contact => (
+              <a 
+                key={contact.id} 
+                href={contact.link} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex flex-col items-center p-4 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+              >
+                <div className="w-12 h-12 flex items-center justify-center mb-2">
+                  <Image
+                    src={contact.has_image ? `/image/${contact.name}.jpg` : '/image/noImage.jpg'}
+                    alt={contact.name}
+                    width={48}
+                    height={48}
+                    className="object-contain"
+                  />
+                </div>
+                <p className="text-center text-gray-700">{contact.name}</p>
+              </a>
+            ))}
           </div>
         </div>
       </div>
