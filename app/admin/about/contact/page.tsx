@@ -318,7 +318,7 @@ const AdminContactPage = () => {
                     onChange={(e) => setNewContact({...newContact, has_image: e.target.checked})}
                   />
                   <label htmlFor="has_image" className="ml-2 block text-sm font-medium text-gray-700">
-                    画像あり (画像は /image/{'{name}'}.jpg に配置してください)
+                    画像あり ( /image/{newContact.name}.svg がある場合はチェックを入れてください )
                   </label>
                 </div>
               </div>
