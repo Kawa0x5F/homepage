@@ -146,7 +146,7 @@ export default function EditAbout({ params }: Props) {
       )}
 
       <form onSubmit={handleSubmit} className="max-w-3xl mx-auto mt-10 bg-white shadow-lg rounded-xl p-12 space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
           <div>
             <label className="block text-gray-700 text-base font-bold mb-3">名前:</label>
             <input 
@@ -182,7 +182,7 @@ export default function EditAbout({ params }: Props) {
                 onChange={(e) => setFormData({...formData, has_image: e.target.checked})}
                 />
                 <label htmlFor="has_image" className="ml-2 block text-sm font-medium text-gray-700">
-                画像あり (画像は /image/{'{name}'}.jpg に配置してください)
+                画像あり ( /image/{formData.name}.svg がある場合はチェックを入れてください )
                 </label>
             </div>
         </div>
