@@ -81,7 +81,7 @@ export default function Products() {
                           rel="noopener noreferrer"
                           className="flex items-center text-gray-700 hover:text-blue-600"
                         >
-                          <img src="/images/github.svg" alt="GitHub" className="w-6 h-6 mr-1" />
+                          <img src="/images/GitHub.svg" alt="GitHub" className="w-6 h-6 mr-1" />
                           <span>GitHub</span>
                         </a>
                       )}
