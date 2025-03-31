@@ -316,6 +316,18 @@ const CreateProductPage = () => {
             className="w-full text-3xl font-bold mb-6 p-0 border-0 focus:outline-none focus:ring-0 placeholder-gray-400"
           />
           
+          {/* 説明文エリア */}
+          <div className="mb-6">
+            <label className="block text-sm text-gray-600 mb-2">説明</label>
+            <textarea 
+              placeholder="プロダクトの説明を入力してください" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)} 
+              className="w-full min-h-32 p-3 border border-gray-300 rounded resize-y focus:outline-none focus:ring-1 focus:ring-blue-500"
+              rows={8}
+            />
+          </div>
+
           {/* GitHub リンク */}
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
@@ -346,17 +358,6 @@ const CreateProductPage = () => {
             />
           </div>
           
-          {/* 説明文エリア */}
-          <div className="mb-6">
-            <label className="block text-sm text-gray-600 mb-2">説明</label>
-            <textarea 
-              placeholder="プロダクトの説明を入力してください" 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)} 
-              className="w-full min-h-32 p-3 border border-gray-300 rounded resize-y focus:outline-none focus:ring-1 focus:ring-blue-500"
-              rows={8}
-            />
-          </div>
         </div>
       </main>
     </div>
