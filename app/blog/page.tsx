@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Footer from '../component/Footer';
+import Footer from '@/app/component/Footer';
+import '@/app/ui/globals.css'
 
 interface Tag {
   id: number;
@@ -16,7 +17,7 @@ interface Article {
   image_url?: string;
   created_at: string;
   updated_at: string;
-  tags?: Tag[] | string[];
+  tags?: Tag[] | string[] | null;
 }
 
 export default function Blog() {
@@ -26,24 +27,33 @@ export default function Blog() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:8080/articles/publish')
-      .then((res) => res.json())
-      .then((data: unknown) => {
-        const sortedArticles = (data as Article[]).sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-        setArticles(sortedArticles);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-  
+    Promise.all([
+      fetch('http://localhost:8080/articles/publish').then((res) => res.json()),
+      fetch('http://localhost:8080/tags/all').then((res) => res.json())
+    ])
+    .then(([articlesData, tagsData]) => {
+      // Ensure tags is an array of Tag type, default to empty array if null or not an array
+      const safeTags: Tag[] = Array.isArray(tagsData) ? tagsData : [];
+      
+      // Sort articles and ensure tags are processed safely
+      const processedArticles = (articlesData as Article[]).map(article => ({
+        ...article,
+        // Ensure tags is always an array, converting to empty array if null
+        tags: Array.isArray(article.tags) ? article.tags : []
+      })).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
 
-  useEffect(() => {
-    fetch('http://localhost:8080/tags/all')
-      .then((res) => res.json())
-      .then((data: unknown) => setTags(data as Tag[]))
-      .catch(() => {});
+      setArticles(processedArticles);
+      setTags(safeTags);
+      setLoading(false);
+    })
+    .catch((error) => {
+      console.error('Error fetching data:', error);
+      setArticles([]);
+      setTags([]);
+      setLoading(false);
+    });
   }, []);
 
   const toggleTagSelection = (tagId: number) => {
@@ -53,7 +63,11 @@ export default function Blog() {
   };
 
   const filteredArticles = selectedTags.length > 0
-    ? articles.filter(article => article.tags && article.tags.some(tag => typeof tag !== 'string' && selectedTags.includes(tag.id)))
+    ? articles.filter(article => 
+        article.tags && article.tags.some(tag => 
+          typeof tag !== 'string' && selectedTags.includes(tag.id)
+        )
+      )
     : articles;
 
   return (
@@ -66,7 +80,7 @@ export default function Blog() {
           <div className="flex space-x-2">
             <Link href="/" className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition">TOP</Link>
             <Link href="/about" className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition">ABOUT</Link>
-            <Link href="/products" className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition">PRODUCT</Link>
+            <Link href="/product" className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition">PRODUCT</Link>
           </div>
         </div>
       </div>
@@ -100,10 +114,10 @@ export default function Blog() {
                 <img 
                   src={article.image_url || "/images/kawa_logo.jpg"} 
                   alt={article.title} 
-                  className="w-full  object-cover"
+                  className="w-full object-cover"
                 />
                   <h2 className="text-xl font-semibold line-clamp-2">{article.title}</h2>
-                  {article.tags && (
+                  {article.tags && article.tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {article.tags.map(tag => (
                         <span key={typeof tag === 'string' ? tag : tag.id} className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-md">

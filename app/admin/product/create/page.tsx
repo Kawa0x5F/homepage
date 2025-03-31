@@ -4,16 +4,13 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, 
-  Clock, 
   Save, 
   Image as ImageIcon,
   X,
   AlertCircle,
-  Tag as TagIcon,
-  Plus
+  Github,
+  FileText
 } from 'lucide-react';
-import RichTextEditor from '@/app/component/RichTextEditor';
-import ImageCropper from '@/app/component/ImageCropper';
 import '@/app/ui/globals.css'
 
 // 型定義
@@ -31,20 +28,25 @@ interface FileUploadResponse {
   image_url: string;
 }
 
-const CreateArticlePage = () => {
+interface Product {
+  id?: number;
+  title: string;
+  description: string;
+  image_url?: string;
+  github: string;
+  blog: string;
+}
+
+const CreateProductPage = () => {
   const router = useRouter();
   const [title, setTitle] = useState<string>('');
-  const [slug, setSlug] = useState<string>('');
-  const [content, setContent] = useState<string>('');
-  const [isSubmittingPublish, setIsSubmittingPublish] = useState<boolean>(false);
-  const [isSubmittingDraft, setIsSubmittingDraft] = useState<boolean>(false);
+  const [description, setDescription] = useState<string>('');
+  const [github, setGithub] = useState<string>('');
+  const [blog, setBlog] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [featuredImage, setFeaturedImage] = useState<FeaturedImage | null>(null);
-  const [croppingImage, setCroppingImage] = useState<boolean>(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState<string>('');
-  const [editorImagePaths, setEditorImagePaths] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -87,96 +89,60 @@ const CreateArticlePage = () => {
 
     // コンポーネントのクリーンアップ時に未保存の画像を削除
     return () => {
-      // 未保存の画像を削除
-      editorImagePaths.forEach(deleteImage);
-
       if (featuredImage?.url) {
         deleteImage(featuredImage.url);
       }
     };
-  }, [router, featuredImage, editorImagePaths]);
+  }, [router, featuredImage]);
 
   if (!isAuthenticated) return null;
 
-  const handleCreate = async (publish = false) => {
+  const handleCreate = async () => {
     // 入力検証
     if (!title.trim()) {
       setErrorMessage('タイトルは必須です');
       return;
     }
     
-    if (!content.trim()) {
-      setErrorMessage('本文は必須です');
+    if (!description.trim()) {
+      setErrorMessage('説明は必須です');
       return;
     }
     
-    if (!slug.trim()) {
-      setErrorMessage('URLの設定は必須です');
-      return;
-    }
-    
-    // 公開と下書きの状態を個別に管理
-    if (publish) {
-      setIsSubmittingPublish(true);
-    } else {
-      setIsSubmittingDraft(true);
-    }
-    
+    setIsSubmitting(true);
     setErrorMessage(null);
     
     try {
-      const image_url = featuredImage?.url || null;
+      const productData: Product = {
+        title,
+        description,
+        image_url: featuredImage?.url || undefined,
+        github,
+        blog
+      };
       
-      const response = await fetch('http://localhost:8080/articles', {
+      const response = await fetch('http://localhost:8080/product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title, 
-          slug, 
-          content,
-          is_publish: publish,
-          image_url
-        }),
+        body: JSON.stringify(productData),
         credentials: 'include'
       });
     
-    // APIからのエラーレスポンスを処理
-    if (!response.ok) {
-      const errorData = await response.json() as ApiErrorResponse;
-      setErrorMessage(errorData.message || errorData.error || 'エラーが発生しました');
-      setIsSubmittingPublish(false);
-      setIsSubmittingDraft(false);
-      return;
-    }
-    
-    // タグがある場合は、タグを送信
-    if (tags.length > 0) {
-      const tagResponse = await fetch('http://localhost:8080/tags/article', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug,
-          tags: {
-            tags: tags.length > 0 ? tags : null
-          }
-        }),
-        credentials: 'include'
-      });
-      
-      if (!tagResponse.ok) {
-        const tagErrorData = await tagResponse.json() as ApiErrorResponse;
-        console.error('タグ保存エラー:', tagErrorData);
+      // APIからのエラーレスポンスを処理
+      if (!response.ok) {
+        const errorData = await response.json() as ApiErrorResponse;
+        setErrorMessage(errorData.message || errorData.error || 'エラーが発生しました');
+        setIsSubmitting(false);
+        return;
       }
-    }
     
-    router.push('/admin/articles');
-  } catch (error) {
-    console.error('投稿エラー:', error);
-    setErrorMessage('サーバーとの通信中にエラーが発生しました');
-    setIsSubmittingPublish(false);
-    setIsSubmittingDraft(false);
-  }
-};
+      router.push('/admin/product');
+    } catch (error) {
+      console.error('投稿エラー:', error);
+      setErrorMessage('サーバーとの通信中にエラーが発生しました');
+      setIsSubmitting(false);
+    }
+  };
 
   // 画像選択ハンドラ
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,17 +153,16 @@ const CreateArticlePage = () => {
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         setImageToEdit(reader.result);
-        setCroppingImage(true);
+        handleImageUpload(file);
       }
     };
     reader.readAsDataURL(file);
   };
 
-  // トリミング完了ハンドラ
-  const handleCropComplete = async (croppedFile: File) => {
-    if (!croppedFile) {
+  // 画像アップロードハンドラ
+  const handleImageUpload = async (file: File) => {
+    if (!file) {
       setErrorMessage('画像の処理に失敗しました');
-      setCroppingImage(false);
       return;
     }
 
@@ -208,7 +173,7 @@ const CreateArticlePage = () => {
       }
 
       const formData = new FormData();
-      formData.append('file', croppedFile, croppedFile.name);
+      formData.append('file', file, file.name);
       
       const fileResponse = await fetch('http://localhost:8080/image', {
         method: 'POST',
@@ -219,7 +184,6 @@ const CreateArticlePage = () => {
       if (!fileResponse.ok) {
         const errorText = await fileResponse.text();
         setErrorMessage(`ファイルアップロードに失敗しました: ${errorText}`);
-        setCroppingImage(false);
         return;
       }
       
@@ -228,14 +192,11 @@ const CreateArticlePage = () => {
       // 画像の状態を更新
       setFeaturedImage({
         url: fileData.image_url,
-        file: croppedFile
+        file: file
       });
-      
-      setCroppingImage(false);
     } catch (error) {
       console.error('画像アップロードエラー:', error);
       setErrorMessage('画像のアップロード中にエラーが発生しました');
-      setCroppingImage(false);
     }
   };
 
@@ -253,34 +214,12 @@ const CreateArticlePage = () => {
     if (featuredImage?.url) {
       await deleteImage(featuredImage.url);
     }
-    router.push('/admin/articles');
+    router.push('/admin/product');
   };
 
   // エラーメッセージを閉じる
   const dismissError = () => {
     setErrorMessage(null);
-  };
-
-  // タグ追加処理
-  const addTag = () => {
-    const trimmedTag = tagInput.trim();
-    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 3) {
-      setTags([...tags, trimmedTag]);
-      setTagInput('');
-    }
-  };
-
-  // Enterキーでタグを追加
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTag();
-    }
-  };
-
-  // タグ削除処理
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
   return (
@@ -313,33 +252,14 @@ const CreateArticlePage = () => {
             <span className="text-sm">戻る</span>
           </button>
           <div className="flex items-center space-x-3">
-            <div className="relative flex items-center">
-              <span className="text-xs text-gray-500 mr-1">URL:</span>
-              <input 
-                type="text" 
-                value={slug} 
-                onChange={(e) => setSlug(e.target.value)}
-                className="text-sm py-1 px-2 border border-gray-300 rounded w-40"
-                placeholder="カスタムURL"
-              />
-            </div>
             <button 
-              onClick={() => handleCreate(false)} 
-              className="text-sm text-gray-600 flex items-center gap-1 px-3 py-1 rounded-full hover:bg-gray-100" 
-              disabled={isSubmittingDraft || isSubmittingPublish}
-              type="button"
-            >
-              <Clock size={14} />
-              {isSubmittingDraft ? '保存中...' : '下書き保存'}
-            </button>
-            <button 
-              onClick={() => handleCreate(true)} 
-              className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-full text-sm font-medium" 
-              disabled={isSubmittingPublish || isSubmittingDraft}
+              onClick={handleCreate} 
+              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-full text-sm font-medium" 
+              disabled={isSubmitting}
               type="button"
             >
               <Save size={14} />
-              {isSubmittingPublish ? '公開中...' : '公開する'}
+              {isSubmitting ? '保存中...' : '保存する'}
             </button>
           </div>
         </div>
@@ -348,22 +268,13 @@ const CreateArticlePage = () => {
       <main className="max-w-2xl mx-auto mt-6 mb-16">
         <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
         
-        {croppingImage && imageToEdit && (
-          <ImageCropper 
-            imageUrl={imageToEdit} 
-            onCancel={() => setCroppingImage(false)} 
-            onCrop={handleCropComplete} 
-            aspectRatio={16/9} 
-          />
-        )}
-
         {/* アイキャッチ画像エリア */}
         <div className="relative">
         {featuredImage ? (
           <div className="relative w-full h-56 bg-gray-100">
             <img 
               src={featuredImage.url} 
-              alt="アイキャッチ画像" 
+              alt="プロダクト画像" 
               className="w-full h-full object-cover"
             />
             <button 
@@ -391,7 +302,7 @@ const CreateArticlePage = () => {
               onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
             >
               <ImageIcon size={24} className="text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500">アイキャッチ画像を設定</p>
+              <p className="text-sm text-gray-500">プロダクト画像を設定</p>
             </div>
           )}
         </div>
@@ -405,67 +316,52 @@ const CreateArticlePage = () => {
             className="w-full text-3xl font-bold mb-6 p-0 border-0 focus:outline-none focus:ring-0 placeholder-gray-400"
           />
           
-          {/* タグ入力エリア */}
+          {/* 説明文エリア */}
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <TagIcon size={16} className="text-gray-500" />
-              <span className="text-sm text-gray-600">タグ（最大3つ）</span>
-            </div>
-            
-            <div className="flex flex-wrap gap-2 mb-2">
-              {tags.map(tag => (
-                <div 
-                  key={tag}
-                  className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm"
-                >
-                  <span className="text-gray-800">{tag}</span>
-                  <button
-                    onClick={() => removeTag(tag)}
-                    className="ml-2 text-gray-500 hover:text-gray-700"
-                    type="button"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            
-            {tags.length < 3 && (
-              <div className="flex items-center">
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagInputKeyDown}
-                  placeholder="タグを入力"
-                  className="flex-1 text-sm py-1.5 px-3 border border-gray-300 rounded-l focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  disabled={tags.length >= 3}
-                />
-                <button
-                  onClick={addTag}
-                  className="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-r border border-l-0 border-gray-300"
-                  type="button"
-                  disabled={!tagInput.trim() || tags.length >= 3}
-                >
-                  <Plus size={16} className="text-gray-600" />
-                </button>
-              </div>
-            )}
-          </div>
-          
-          {/* エディタ部分 */}
-          <div className="prose prose-lg max-w-none">
-            <RichTextEditor 
-              content={content} 
-              setContent={setContent}
-              imagePaths={editorImagePaths}
-              setImagePaths={setEditorImagePaths}
+            <label className="block text-sm text-gray-600 mb-2">説明</label>
+            <textarea 
+              placeholder="プロダクトの説明を入力してください" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)} 
+              className="w-full min-h-32 p-3 border border-gray-300 rounded resize-y focus:outline-none focus:ring-1 focus:ring-blue-500"
+              rows={8}
             />
           </div>
+
+          {/* GitHub リンク */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Github size={16} className="text-gray-500" />
+              <span className="text-sm text-gray-600">GitHub リンク</span>
+            </div>
+            <input 
+              type="text" 
+              placeholder="https://github.com/username/repo" 
+              value={github} 
+              onChange={(e) => setGithub(e.target.value)} 
+              className="w-full text-sm p-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          
+          {/* ブログ記事リンク */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText size={16} className="text-gray-500" />
+              <span className="text-sm text-gray-600">関連ブログ記事URL</span>
+            </div>
+            <input 
+              type="text" 
+              placeholder="https://blog.com/article" 
+              value={blog} 
+              onChange={(e) => setBlog(e.target.value)} 
+              className="w-full text-sm p-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          
         </div>
       </main>
     </div>
   );
 };
 
-export default CreateArticlePage;
+export default CreateProductPage;

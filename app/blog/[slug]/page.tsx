@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
 import Footer from "@/app/component/Footer";
+import '@/app/ui/globals.css'
 
 interface Article {
   id: number;

@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Footer from '@/app/component/Footer';
+import '@/app/ui/globals.css'
 
 const AdminPage = () => {
   const router = useRouter();
@@ -48,7 +49,7 @@ const AdminPage = () => {
       {/* メインコンテンツ */}
       <main className="flex-grow max-w-5xl mx-auto px-4 py-8 w-full">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <DashboardCard title="自己紹介管理" description="プロフィール情報の編集" color="indigo" path="/admin/aboutme" />
+          <DashboardCard title="自己紹介管理" description="プロフィール情報の編集" color="indigo" path="/admin/about" />
           <DashboardCard title="記事管理" description="ブログ記事の作成・編集" color="green" path="/admin/articles" />
           <DashboardCard title="作品管理" description="ポートフォリオ作品の追加・編集" color="purple" path="/admin/product" />
         </div>
@@ -59,14 +60,21 @@ const AdminPage = () => {
     </div>
   );
 };
+const colorMap: { [key: string]: string } = {
+  indigo: "bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500",
+  green: "bg-green-600 hover:bg-green-700 focus:ring-green-500",
+  purple: "bg-purple-600 hover:bg-purple-700 focus:ring-purple-500",
+};
 
 const DashboardCard = ({ title, description, color, path }: { title: string, description: string, color: string, path: string }) => {
   const router = useRouter();
+  const buttonClasses = colorMap[color] || "bg-gray-600 hover:bg-gray-700 focus:ring-gray-500";
+
   return (
     <div className="bg-white overflow-hidden shadow rounded-lg">
       <div className="p-5">
         <div className="flex items-center">
-          <div className={`flex-shrink-0 bg-${color}-500 rounded-md p-3`}>
+          <div className={`flex-shrink-0 p-3 rounded-md ${colorMap[color] || "bg-gray-500"}`}>
             <svg className="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
@@ -79,7 +87,7 @@ const DashboardCard = ({ title, description, color, path }: { title: string, des
         <div className="mt-6">
           <button
             onClick={() => router.push(path)}
-            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-${color}-600 hover:bg-${color}-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${color}-500`}
+            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${buttonClasses}`}
           >
             管理画面へ
           </button>

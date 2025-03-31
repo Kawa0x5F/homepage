@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import '@/app/ui/globals.css'
 
 export default function LoginPage() {
   const [id, setId] = useState("");

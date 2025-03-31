@@ -4,19 +4,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { 
   ArrowLeft, 
-  Clock, 
   Save, 
   Image as ImageIcon,
   X,
   AlertCircle,
-  Tag as TagIcon,
-  Plus
+  Link as LinkIcon
 } from 'lucide-react';
-import RichTextEditor from '@/app/component/RichTextEditor';
-import ImageCropper from '@/app/component/ImageCropper';
 import '@/app/ui/globals.css'
+import ImageCropper from '@/app/component/ImageCropper';
 
-// 型定義は以前と同じ
+// 型定義
 interface FeaturedImage {
   url: string;
   file: File | null;
@@ -28,50 +25,42 @@ interface ApiErrorResponse {
   [key: string]: unknown;
 }
 
-interface Tag {
-  id: number;
-  tag_name: string;
-  date?: string;
-}
-
 interface FileUploadResponse {
   image_url: string;
 }
 
-interface ArticleData {
+interface ProductData {
   id: number;
   title: string;
-  slug: string;
-  content: string;
-  is_publish: boolean;
+  description: string;
   image_url?: string | null;
-  tags?: Tag[] | string[];
+  github: string;
+  blog: string;
+  created_at: string;
+  updated_at: string;
 }
 
-const EditArticlePage = () => {
+const EditProductPage = () => {
   const router = useRouter();
   const params = useParams();
-  const slug = params?.slug as string;
+  const productId = params?.id as string;
   
   const [title, setTitle] = useState<string>('');
-  const [content, setContent] = useState<string>('');
-  const [articleSlug, setArticleSlug] = useState<string>('');
-  const [isSubmittingPublish, setIsSubmittingPublish] = useState<boolean>(false);
-  const [isSubmittingDraft, setIsSubmittingDraft] = useState<boolean>(false);
+  const [description, setDescription] = useState<string>('');
+  const [github, setGithub] = useState<string>('');
+  const [blog, setBlog] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [featuredImage, setFeaturedImage] = useState<FeaturedImage | null>(null);
   const [originalFeaturedImage, setOriginalFeaturedImage] = useState<string | null>(null);
   const [croppingImage, setCroppingImage] = useState<boolean>(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [imageRemoved, setImageRemoved] = useState(false);
-  const [editorImagePaths, setEditorImagePaths] = useState<string[]>([]);
 
-  // 画像削除処理の追加
+  // 画像削除処理
   const deleteImage = async (imageUrl: string) => {
     try {
       // URLが空や未定義の場合は処理しない
@@ -87,7 +76,6 @@ const EditArticlePage = () => {
       if (!response.ok) {
         const errorData = await response.json() as ApiErrorResponse;
         console.error('画像削除エラー:', errorData);
-        // エラー時の追加のエラーハンドリング
         setErrorMessage(`画像削除に失敗しました: ${errorData.message || '不明なエラー'}`);
       }
     } catch (error) {
@@ -117,104 +105,82 @@ const EditArticlePage = () => {
 
     // コンポーネントのクリーンアップ時に未保存の画像を削除
     return () => {
-      // 未保存の画像を削除
-      editorImagePaths.forEach(deleteImage);
-
-      if (featuredImage?.url) {
+      if (featuredImage?.url && featuredImage.url !== originalFeaturedImage) {
         deleteImage(featuredImage.url);
       }
     };
-  }, [router]);
+  }, [router, originalFeaturedImage, featuredImage?.url]);
 
   // 認証チェックが終わるまで描画を防ぐ
   if (isAuthenticated === null) return null;
 
-  // 記事データの取得
+  // プロダクトデータの取得
   useEffect(() => {
-    if (!slug || isAuthenticated === false) return;
+    if (!productId || isAuthenticated === false) return;
 
-    const fetchArticle = async () => {
+    const fetchProduct = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/article/${slug}`, { credentials: 'include' });
+        const response = await fetch(`http://localhost:8080/product/${productId}`, { credentials: 'include' });
         if (!response.ok) {
-          throw new Error('記事の取得に失敗しました');
+          throw new Error('プロダクトの取得に失敗しました');
         }
 
-        const article: ArticleData = await response.json();
+        const product: ProductData = await response.json();
 
-        setTitle(article.title || '');
-        setContent(article.content || '');
-        setArticleSlug(slug);
+        setTitle(product.title || '');
+        setDescription(product.description || '');
+        setGithub(product.github || '');
+        setBlog(product.blog || '');
 
-        if (article.image_url) {
+        if (product.image_url) {
           setFeaturedImage({
-            url: article.image_url,
+            url: product.image_url,
             file: null
           });
-          setOriginalFeaturedImage(article.image_url);
-        }
-
-        // タグ情報の処理を修正
-        if (article.tags && Array.isArray(article.tags)) {
-          if (typeof article.tags[0] === 'object') {
-            setTags(article.tags.map((tag: any) => tag.tag_name || ''));
-          } else {
-            setTags(article.tags as string[]);
-          }
+          setOriginalFeaturedImage(product.image_url);
         }
 
         setIsLoading(false);
       } catch (error) {
-        console.error('記事取得エラー:', error);
-        setErrorMessage('記事の取得に失敗しました');
+        console.error('プロダクト取得エラー:', error);
+        setErrorMessage('プロダクトの取得に失敗しました');
         setIsLoading(false);
       }
     };
 
-    fetchArticle();
-  }, [slug, isAuthenticated]);
+    fetchProduct();
+  }, [productId, isAuthenticated]);
 
-  const handleUpdate = async (publish = false) => {
+  const handleUpdate = async () => {
     // 入力検証
     if (!title.trim()) {
       setErrorMessage('タイトルは必須です');
       return;
     }
     
-    if (!content.trim()) {
-      setErrorMessage('本文は必須です');
+    if (!description.trim()) {
+      setErrorMessage('説明は必須です');
       return;
     }
     
-    if (!slug.trim()) {
-      setErrorMessage('URLが設定されていません');
-      return;
-    }
-    
-    // 公開と下書きの状態を個別に管理
-    if (publish) {
-      setIsSubmittingPublish(true);
-    } else {
-      setIsSubmittingDraft(true);
-    }
-    
+    setIsSubmitting(true);
     setErrorMessage(null);
     
     try {
-      // 画像パスの処理を修正
+      // 画像パスの処理
       const image_url = imageRemoved 
         ? '' 
         : (featuredImage?.url || originalFeaturedImage || '');
       
-      const response = await fetch(`http://localhost:8080/article/${slug}`, {
+      const response = await fetch(`http://localhost:8080/product/${productId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           title, 
-          slug,
-          content,
-          is_publish: publish,
-          image_url
+          description,
+          image_url,
+          github,
+          blog
         }),
         credentials: 'include'
       });
@@ -223,31 +189,15 @@ const EditArticlePage = () => {
       if (!response.ok) {
         const errorData = await response.json() as ApiErrorResponse;
         setErrorMessage(errorData.message || errorData.error || 'エラーが発生しました');
-        setIsSubmittingPublish(false);
-        setIsSubmittingDraft(false);
+        setIsSubmitting(false);
         return;
       }
       
-      // タグ情報の更新
-      const tagResponse = await fetch(`http://localhost:8080/tags/article/${slug}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tags
-        }),
-        credentials: 'include'
-      });
-      
-      if (!tagResponse.ok) {
-        console.error('タグ更新エラー:', tagResponse.statusText);
-      }
-      
-      router.push('/admin/articles');
+      router.push('/admin/product');
     } catch (error) {
-      console.error('記事更新エラー:', error);
+      console.error('プロダクト更新エラー:', error);
       setErrorMessage('サーバーとの通信中にエラーが発生しました');
-      setIsSubmittingPublish(false);
-      setIsSubmittingDraft(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -345,38 +295,11 @@ const EditArticlePage = () => {
         await deleteImage(featuredImage.url);
       }
       
-      router.push('/admin/articles');
+      router.push('/admin/product');
     } catch (error) {
       console.error('戻る処理中のエラー:', error);
       setErrorMessage('ページ遷移中にエラーが発生しました');
     }
-  };
-
-  // エラーメッセージを閉じる
-  const dismissError = () => {
-    setErrorMessage(null);
-  };
-  
-  // タグ追加処理
-  const addTag = () => {
-    const trimmedTag = tagInput.trim();
-    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 3) {
-      setTags([...tags, trimmedTag]);
-      setTagInput('');
-    }
-  };
-
-  // Enterキーでタグを追加
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTag();
-    }
-  };
-
-  // タグ削除処理
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
   if (isLoading) {
@@ -420,33 +343,14 @@ const EditArticlePage = () => {
             <span className="text-sm">戻る</span>
           </button>
           <div className="flex items-center space-x-3">
-            <div className="relative flex items-center">
-              <span className="text-xs text-gray-500 mr-1">URL:</span>
-              <input 
-                type="text" 
-                value={articleSlug} 
-                disabled
-                className="text-sm py-1 px-2 border border-gray-300 rounded w-40 bg-gray-50"
-                placeholder="カスタムURL"
-              />
-            </div>
             <button 
-              onClick={() => handleUpdate(false)} 
-              className="text-sm text-gray-600 flex items-center gap-1 px-3 py-1 rounded-full hover:bg-gray-100" 
-              disabled={isSubmittingDraft || isSubmittingPublish}
-              type="button"
-            >
-              <Clock size={14} />
-              {isSubmittingDraft ? '更新中...' : '非公開で更新'}
-            </button>
-            <button 
-              onClick={() => handleUpdate(true)} 
+              onClick={handleUpdate} 
               className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-full text-sm font-medium" 
-              disabled={isSubmittingPublish || isSubmittingDraft}
+              disabled={isSubmitting}
               type="button"
             >
               <Save size={14} />
-              {isSubmittingPublish ? '更新中...' : '公開で更新'}
+              {isSubmitting ? '更新中...' : '更新'}
             </button>
           </div>
         </div>
@@ -470,7 +374,7 @@ const EditArticlePage = () => {
             <div className="relative w-full h-56 bg-gray-100">
               <img 
                 src={featuredImage.url} 
-                alt="アイキャッチ画像" 
+                alt="プロダクト画像" 
                 className="w-full h-full object-cover"
               />
               <button 
@@ -491,82 +395,78 @@ const EditArticlePage = () => {
             </div>
           ) : (
             <div 
-              className="w-full h-32 flex flex-col items-center justify-center bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+              className="w-full h-48 flex flex-col items-center justify-center bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
               onClick={() => fileInputRef.current?.click()}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
             >
               <ImageIcon size={24} className="text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500">アイキャッチ画像を設定</p>
+              <p className="text-sm text-gray-500">プロダクト画像を設定</p>
             </div>
           )}
         </div>
 
-        <div className="px-4 py-6">
-          <input 
-            type="text" 
-            placeholder="タイトル" 
-            value={title} 
-            onChange={(e) => setTitle(e.target.value)} 
-            className="w-full text-3xl font-bold mb-6 p-0 border-0 focus:outline-none focus:ring-0 placeholder-gray-400"
-          />
-          
-          {/* タグ入力エリア */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <TagIcon size={16} className="text-gray-500" />
-              <span className="text-sm text-gray-600">タグ（最大3つ）</span>
-            </div>
-            
-            <div className="flex flex-wrap gap-2 mb-2">
-              {tags.map(tag => (
-                <div 
-                  key={tag}
-                  className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm"
-                >
-                  <span className="text-gray-800">{tag}</span>
-                  <button
-                    onClick={() => removeTag(tag)}
-                    className="ml-2 text-gray-500 hover:text-gray-700"
-                    type="button"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            
-            {tags.length < 3 && (
-              <div className="flex items-center">
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagInputKeyDown}
-                  placeholder="タグを入力"
-                  className="flex-1 text-sm py-1.5 px-3 border border-gray-300 rounded-l focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  disabled={tags.length >= 3}
-                />
-                <button
-                  onClick={addTag}
-                  className="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-r border border-l-0 border-gray-300"
-                  type="button"
-                  disabled={!tagInput.trim() || tags.length >= 3}
-                >
-                  <Plus size={16} className="text-gray-600" />
-                </button>
-              </div>
-            )}
+        <div className="px-4 py-6 space-y-6">
+          {/* タイトル入力 */}
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              タイトル*
+            </label>
+            <input 
+              id="title"
+              type="text" 
+              placeholder="プロダクト名" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+              className="w-full text-lg p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
           
-          {/* エディタ部分 */}
-          <div className="prose prose-lg max-w-none">
-            <RichTextEditor 
-              content={content} 
-              setContent={setContent}
-              imagePaths={editorImagePaths}
-              setImagePaths={setEditorImagePaths}
+          {/* 説明入力 */}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              説明*
+            </label>
+            <textarea 
+              id="description"
+              placeholder="プロダクトの説明" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)} 
+              rows={6}
+              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          {/* GitHub URL入力 */}
+          <div>
+            <label htmlFor="github" className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+              <LinkIcon size={14} className="mr-1" />
+              GitHub URL
+            </label>
+            <input 
+              id="github"
+              type="text" 
+              placeholder="https://github.com/username/repository" 
+              value={github} 
+              onChange={(e) => setGithub(e.target.value)} 
+              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          {/* ブログURL入力 */}
+          <div>
+            <label htmlFor="blog" className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+              <LinkIcon size={14} className="mr-1" />
+              ブログURL
+            </label>
+            <input 
+              id="blog"
+              type="text" 
+              placeholder="https://example.com/blog-post" 
+              value={blog} 
+              onChange={(e) => setBlog(e.target.value)} 
+              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -575,4 +475,4 @@ const EditArticlePage = () => {
   );
 };
 
-export default EditArticlePage;
+export default EditProductPage;

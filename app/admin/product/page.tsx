@@ -5,19 +5,20 @@ import Footer from '@/app/component/Footer';
 import { ArrowLeft } from 'lucide-react';
 import '@/app/ui/globals.css'
 
-type Article = {
+type Product = {
   id: number;
   title: string;
-  slug: string;
-  content: string;
-  is_publish: boolean;
+  description: string;
+  image_url: string;
+  github: boolean;
+  blog: string;
   created_at: string;
-  image_url?: string;
+  updated_at: string;
 };
 
 const AdminArticlePage = () => {
   const router = useRouter();
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -51,13 +52,13 @@ const AdminArticlePage = () => {
   const fetchArticles = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/articles/all', { credentials: 'include' });
+      const res = await fetch('http://localhost:8080/product/all', { credentials: 'include' });
       const data = await res.json();
       if (Array.isArray(data)) {
-        const sortedArticles = [...data].sort((a, b) => {
+        const sortedProducts = [...data].sort((a, b) => {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
-        setArticles(sortedArticles as Article[]);
+        setProducts(sortedProducts as Product[]);
       } else {
         console.error('Invalid data format:', data);
       }
@@ -69,38 +70,38 @@ const AdminArticlePage = () => {
   };
 
   const handleCreateRedirect = () => {
-    router.push('/admin/articles/create');
+    router.push('/admin/product/create');
   };
 
-  const handleEditRedirect = (slug: string) => {
-    router.push(`/admin/articles/edit/${slug}`);
+  const handleEditRedirect = (id: number) => {
+    router.push(`/admin/product/edit/${id}`);
   };
 
-  const handleDelete = async (slug: string) => {
+  const handleDelete = async (id: number) => {
     try {
-      const articleData = articles.find(article => article.slug === slug);
-      if (!articleData) {
+      const productData = products.find(product => product.id === id);
+      if (!productData) {
         throw new Error('対象の記事が見つかりません');
       }
 
-      const deleteArticleRes = await fetch(`http://localhost:8080/article/${slug}`, { 
+      const deleteProductRes = await fetch(`http://localhost:8080/product/${id}`, { 
         method: 'DELETE', 
         credentials: 'include' 
       });
 
-      if (!deleteArticleRes.ok) {
+      if (!deleteProductRes.ok) {
         throw new Error('記事の削除に失敗しました');
       }
 
-      if (articleData.image_url) {
-        console.log('Attempting to delete image:', articleData.image_url);
+      if (productData.image_url) {
+        console.log('Attempting to delete image:', productData.image_url);
         const deleteImageRes = await fetch('http://localhost:8080/image', {
           method: 'DELETE',
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ image_url: articleData.image_url })
+          body: JSON.stringify({ image_url: productData.image_url })
         });
 
         if (!deleteImageRes.ok) {
@@ -118,23 +119,6 @@ const AdminArticlePage = () => {
   // 前のページ(/admin)に戻る
   const handleBackToAdmin = () => {
     router.push('/admin');
-  };
-
-  // 公開状態を判定する関数
-  const getPublicStatusDisplay = (status: boolean) => {
-    if (status) { // true の場合
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          公開
-        </span>
-      );
-    } else { // false の場合
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          非公開
-        </span>
-      );
-    }
   };
 
   // 日付をフォーマットする関数
@@ -165,7 +149,7 @@ const AdminArticlePage = () => {
             </div>
 
             <h1 className="text-xl font-semibold text-gray-900 absolute left-1/2 transform -translate-x-1/2">
-              記事管理ダッシュボード
+              作品管理ダッシュボード
             </h1>
 
             <button
@@ -180,16 +164,16 @@ const AdminArticlePage = () => {
       <main className="flex-grow max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full">
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-            <h2 className="text-lg leading-6 font-medium text-gray-900">記事一覧</h2>
-            <p className="mt-1 text-sm text-gray-500">記事の編集、削除、または新規作成を行うことができます。記事は作成日順（新しい順）に表示されています。</p>
+            <h2 className="text-lg leading-6 font-medium text-gray-900">作品一覧</h2>
+            <p className="mt-1 text-sm text-gray-500">作品紹介の編集、削除、または新規作成を行うことができます。作成日順（新しい順）に表示されています。</p>
           </div>
           {isLoading ? (
             <div className="py-12 flex justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
               <span className="ml-2">読み込み中...</span>
             </div>
-          ) : articles.length === 0 ? (
-            <div className="py-12 text-center">記事がありません</div>
+          ) : products.length === 0 ? (
+            <div className="py-12 text-center">作品がありません</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -197,31 +181,25 @@ const AdminArticlePage = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">タイトル</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作成日</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">公開状態</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最終更新日</th>
                     <th className="relative px-6 py-3"><span className="sr-only">編集</span></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {articles.map((article) => (
-                    <tr key={article.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{article.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{article.title}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{article.slug}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(article.created_at)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {getPublicStatusDisplay(article.is_publish)}
-                      </td>
+                  {products.map((product) => (
+                    <tr key={product.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.title}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(product.updated_at)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                        <button onClick={() => handleEditRedirect(article.slug)} className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-md">編集</button>
-                        {deleteConfirmId === article.id ? (
+                        <button onClick={() => handleEditRedirect(product.id)} className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-md">編集</button>
+                        {deleteConfirmId === product.id ? (
                           <span className="inline-flex rounded-md shadow-sm">
-                            <button onClick={() => handleDelete(article.slug)} className="text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded-md">確認</button>
+                            <button onClick={() => handleDelete(product.id)} className="text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded-md">確認</button>
                             <button onClick={() => setDeleteConfirmId(null)} className="ml-2 text-gray-600 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md">キャンセル</button>
                           </span>
                         ) : (
-                          <button onClick={() => setDeleteConfirmId(article.id)} className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md">削除</button>
+                          <button onClick={() => setDeleteConfirmId(product.id)} className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md">削除</button>
                         )}
                       </td>
                     </tr>
@@ -232,7 +210,7 @@ const AdminArticlePage = () => {
           )}
         </div>
       </main>
-      <Footer siteName="記事管理システム" adminName="Kawa_" />
+      <Footer siteName="作品管理システム" adminName="Kawa_" />
     </div>
   );
 };

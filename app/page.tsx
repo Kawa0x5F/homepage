@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import BackgroundText from './component/BackgroundText';
-import './ui/globals.css';
 import CardItem from './component/CardItem';
+import '@/app/ui/globals.css'
 
 export const metadata: Metadata = {
   title: 'Kawa_Web',
